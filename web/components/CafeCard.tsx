@@ -50,6 +50,7 @@ export function CafeCard({ cafe, status, favorite, onToggleFavorite, onSelect }:
           type="button"
           aria-pressed={favorite}
           aria-label={favorite ? `Remove ${cafe.name} from favorites` : `Save ${cafe.name} to favorites`}
+          title={favorite ? "Saved · tap to remove" : "Save for later"}
           onClick={() => onToggleFavorite(cafe.id)}
           className={
             "relative z-10 -m-1.5 shrink-0 p-1.5 transition-colors duration-150 motion-reduce:transition-none " +
@@ -61,7 +62,7 @@ export function CafeCard({ cafe, status, favorite, onToggleFavorite, onSelect }:
         </button>
       </header>
 
-      <p className={`${MONO_LABEL} -mt-0.5 truncate text-muted`} title={[cafe.neighborhood, address].filter(Boolean).join(" · ")}>
+      <p className={`${MONO_LABEL} -mt-0.5 text-muted`}>
         {cafe.neighborhood}
         {address && <> · {address}</>}
       </p>

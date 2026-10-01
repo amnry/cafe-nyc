@@ -24,6 +24,6 @@ describe("safeWebsite", () => {
 
 describe("triText", () => {
   it("never renders unknown as No", () => {
-    expect([triText(true), triText(false), triText(null)]).toEqual(["Yes", "No", "Unknown"]);
+    expect([triText(true), triText(false), triText(null)]).toEqual(["Yes", "No", "Ask the barista"]);
   });
 });

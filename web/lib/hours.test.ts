@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatTime, getOpenStatus, nyWeekMinute } from "./hours";
+import { formatNyClock, formatTime, getOpenStatus, nyWeekMinute } from "./hours";
 import type { HoursPeriod } from "./types";
 
 // Sun Sep 27 2026 is day 0; New York is on EDT (UTC-4) all that week.
@@ -132,10 +132,18 @@ describe("time zone handling", () => {
 
 describe("card short labels", () => {
   it("compact times, day name only when not today", () => {
-    expect(getOpenStatus(weekdays, at(2, 7)).short).toBe("Closed · opens 8AM");
-    expect(getOpenStatus(weekdays, at(2, 20)).short).toBe("Closed · opens Wed 8AM");
+    expect(getOpenStatus(weekdays, at(2, 7)).short).toBe("Closed · back at 8AM");
+    expect(getOpenStatus(weekdays, at(2, 20)).short).toBe("Closed · back Wed 8AM");
+    expect(getOpenStatus(weekdays, at(2, 20)).label).toBe("Closed · back Wed 8 AM");
     expect(getOpenStatus([P(1, 8, 0, 1, 17, 30)], at(1, 9)).short).toBe("Open · til 5:30PM");
     expect(getOpenStatus(null, at(1, 9)).short).toBe("Hours unavailable");
+  });
+});
+
+describe("formatNyClock", () => {
+  it("formats the New York wall clock", () => {
+    expect(formatNyClock(new Date("2026-09-30T03:42:00Z"))).toBe("11:42 PM"); // EDT
+    expect(formatNyClock(new Date("2027-01-05T17:05:00Z"))).toBe("12:05 PM"); // EST
   });
 });
 

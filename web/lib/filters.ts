@@ -6,9 +6,10 @@ export interface Filters {
   dogs: boolean; // true = only cafes with allows_dogs === true (unknown excluded)
   openNow: boolean;
   prices: number[]; // selected tiers 1-4; empty = no price filter
+  neighborhoods: string[]; // empty = all neighborhoods
 }
 
-export const DEFAULT_FILTERS: Filters = { restroom: false, dogs: false, openNow: false, prices: [] };
+export const DEFAULT_FILTERS: Filters = { restroom: false, dogs: false, openNow: false, prices: [], neighborhoods: [] };
 
 /** Google's level 0 (free) and 1 both display as "$". Null stays null (unknown). */
 export function priceTier(level: number | null): number | null {
@@ -17,7 +18,7 @@ export function priceTier(level: number | null): number | null {
 }
 
 export function activeFilterCount(f: Filters): number {
-  return Number(f.restroom) + Number(f.dogs) + Number(f.openNow) + f.prices.length;
+  return Number(f.restroom) + Number(f.dogs) + Number(f.openNow) + f.prices.length + f.neighborhoods.length;
 }
 
 /**
@@ -26,6 +27,7 @@ export function activeFilterCount(f: Filters): number {
  */
 export function applyFilters(cafes: Cafe[], f: Filters, now: Date | null): Cafe[] {
   return cafes.filter((c) => {
+    if (f.neighborhoods.length > 0 && !f.neighborhoods.includes(c.neighborhood)) return false;
     if (f.restroom && c.restroom !== true) return false;
     if (f.dogs && c.allows_dogs !== true) return false;
     if (f.prices.length > 0) {

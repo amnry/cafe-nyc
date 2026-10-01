@@ -52,6 +52,13 @@ describe("applyFilters", () => {
     expect(applyFilters([cafe({ opening_hours: null })], { ...DEFAULT_FILTERS, openNow: true }, null)).toHaveLength(1);
   });
 
+  it("neighborhood filter: multi-select, empty means all", () => {
+    const all = [cafe({ id: "w", neighborhood: "West Village" }), cafe({ id: "g", neighborhood: "Greenwich Village" })];
+    expect(applyFilters(all, { ...DEFAULT_FILTERS, neighborhoods: ["Greenwich Village"] }, noon).map((c) => c.id)).toEqual(["g"]);
+    expect(applyFilters(all, { ...DEFAULT_FILTERS, neighborhoods: ["West Village", "Greenwich Village"] }, noon)).toHaveLength(2);
+    expect(applyFilters(all, DEFAULT_FILTERS, noon)).toHaveLength(2);
+  });
+
   it("filters combine with AND", () => {
     const all = [cafe({ id: "a", restroom: true, allows_dogs: true }), cafe({ id: "b", restroom: true, allows_dogs: false })];
     expect(applyFilters(all, { ...DEFAULT_FILTERS, restroom: true, dogs: true }, noon).map((c) => c.id)).toEqual(["a"]);
@@ -63,6 +70,6 @@ describe("helpers", () => {
     expect([priceTier(null), priceTier(0), priceTier(1), priceTier(4)]).toEqual([null, 1, 1, 4]);
   });
   it("activeFilterCount", () => {
-    expect(activeFilterCount({ restroom: true, dogs: false, openNow: true, prices: [1, 2] })).toBe(4);
+    expect(activeFilterCount({ restroom: true, dogs: false, openNow: true, prices: [1, 2], neighborhoods: ["West Village"] })).toBe(5);
   });
 });

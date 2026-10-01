@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useFavorites } from "@/lib/favorites";
 import { applyFilters, DEFAULT_FILTERS, type Filters } from "@/lib/filters";
 import { getOpenStatus } from "@/lib/hours";
+import { pickSurprise } from "@/lib/live";
 import type { Cafe } from "@/lib/types";
 import { useNow } from "@/lib/useNow";
 import { MONO_LABEL } from "./bits";
@@ -17,13 +18,21 @@ export function CafeBrowser({ cafes }: { cafes: Cafe[] }) {
   const now = useNow();
   const { ids: favorites, toggle } = useFavorites();
   const visible = useMemo(() => applyFilters(cafes, filters, now), [cafes, filters, now]);
+  const neighborhoods = useMemo(() => [...new Set(cafes.map((c) => c.neighborhood))].sort(), [cafes]);
 
   return (
     <div className="flex flex-col gap-5">
-      <FilterBar filters={filters} onChange={setFilters} shown={visible.length} total={cafes.length} />
+      <FilterBar
+        filters={filters}
+        onChange={setFilters}
+        neighborhoods={neighborhoods}
+        shown={visible.length}
+        total={cafes.length}
+        onSurprise={() => setSelected(pickSurprise(visible, now))}
+      />
       {visible.length === 0 ? (
         <p className={`border border-dashed border-line p-10 text-center ${MONO_LABEL} text-muted`}>
-          No cafes match these filters.{" "}
+          Nothing here. Even the barista is confused.{" "}
           <button type="button" className="text-accent underline underline-offset-4" onClick={() => setFilters(DEFAULT_FILTERS)}>
             Clear filters
           </button>

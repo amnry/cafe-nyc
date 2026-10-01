@@ -26,6 +26,13 @@ export function nyWeekMinute(now: Date): number {
   return day * MIN_PER_DAY + Number(parts.hour) * 60 + Number(parts.minute);
 }
 
+const clockFormat = new Intl.DateTimeFormat("en-US", { timeZone: TZ, hour: "numeric", minute: "2-digit" });
+
+/** "11:42 PM" on the New York wall clock. */
+export function formatNyClock(now: Date): string {
+  return clockFormat.format(now);
+}
+
 export function formatTime(minuteOfDay: number, compact = false): string {
   const h24 = Math.floor(minuteOfDay / 60) % 24;
   const m = minuteOfDay % 60;
@@ -90,6 +97,7 @@ export function getOpenStatus(periods: HoursPeriod[] | null, now: Date = new Dat
   const sameDay = Math.floor(opensAbs / MIN_PER_DAY) === Math.floor(t / MIN_PER_DAY);
   const dayLabel = sameDay ? "" : `${DAY_NAMES[Math.floor(opensAbs / MIN_PER_DAY) % 7]} `;
   const opensAt = `${dayLabel}${formatTime(opensAbs % MIN_PER_DAY)}`;
-  const short = `Closed · opens ${dayLabel}${formatTime(opensAbs % MIN_PER_DAY, true)}`;
-  return { state: "closed", label: `Closed · opens ${opensAt}`, short, opensAt };
+  const back = (time: string) => (sameDay ? `back at ${time}` : `back ${dayLabel}${time}`);
+  const short = `Closed · ${back(formatTime(opensAbs % MIN_PER_DAY, true))}`;
+  return { state: "closed", label: `Closed · ${back(formatTime(opensAbs % MIN_PER_DAY))}`, short, opensAt };
 }
