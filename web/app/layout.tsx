@@ -18,9 +18,27 @@ const display = Barlow_Condensed({
   subsets: ["latin"],
 });
 
+const TITLE = "Find your 3rd place · NYC";
+const DESCRIPTION = "Not home, not the office. Scouted cafes in NYC for working, meeting and studying.";
+
 export const metadata: Metadata = {
-  title: "Cafes for remote work — NYC",
-  description: "Remote-work-friendly cafes in the West Village and Greenwich Village, NYC.",
+  metadataBase: new URL("https://cafe-nyc.vercel.app"),
+  title: TITLE,
+  description: DESCRIPTION,
+  // og:image / twitter:image come from app/opengraph-image.tsx and app/twitter-image.tsx
+  openGraph: {
+    type: "website",
+    url: "/",
+    siteName: "3rd place",
+    title: TITLE,
+    description: DESCRIPTION,
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

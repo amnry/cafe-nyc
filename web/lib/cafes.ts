@@ -36,7 +36,12 @@ export function cafesUrl(baseUrl: string): string {
   return `${baseUrl.replace(/\/$/, "")}/rest/v1/cafes_public?${params}`;
 }
 
-export async function getCafes(): Promise<Cafe[]> {
+export interface CafesResult {
+  cafes: Cafe[];
+  fetchedAt: number; // ms; seeds open/closed status in server HTML before the client clock takes over
+}
+
+export async function getCafes(): Promise<CafesResult> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
@@ -49,5 +54,7 @@ export async function getCafes(): Promise<Cafe[]> {
   if (!res.ok) {
     throw new Error(`cafes_public fetch failed: HTTP ${res.status}`);
   }
-  return (await res.json()) as Cafe[];
+  const cafes = (await res.json()) as Cafe[];
+  const date = Date.parse(res.headers.get("date") ?? "");
+  return { cafes, fetchedAt: Number.isNaN(date) ? Date.now() : date };
 }

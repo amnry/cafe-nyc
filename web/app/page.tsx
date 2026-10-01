@@ -6,7 +6,7 @@ import { getCafes } from "@/lib/cafes";
 export const revalidate = 3600;
 
 export default async function Home() {
-  const cafes = await getCafes();
+  const { cafes, fetchedAt } = await getCafes();
   return (
     <main className="mx-auto w-full max-w-[1800px] flex-1 px-4 py-8 sm:px-6 lg:px-8">
       <header className="mb-6">
@@ -16,11 +16,12 @@ export default async function Home() {
         </h1>
         <p className="mt-2 text-sm text-muted">not home, not the office, scouted cafes in NYC</p>
       </header>
-      <CafeBrowser cafes={cafes} />
-      <footer className="mt-12 border-t border-line pt-4">
+      <CafeBrowser cafes={cafes} renderedAt={fetchedAt} />
+      <footer className="mt-12 flex flex-col gap-1.5 border-t border-line pt-4">
         <p className={`${MONO_LABEL} text-muted`}>
           Built in/for NYC <span aria-hidden>🗽</span>
         </p>
+        <p className="text-xs text-dim">Data from Google Maps, refreshed every two weeks.</p>
       </footer>
     </main>
   );

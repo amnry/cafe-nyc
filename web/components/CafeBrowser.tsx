@@ -12,10 +12,10 @@ import { CafeCard } from "./CafeCard";
 import { DetailDrawer } from "./DetailDrawer";
 import { FilterBar } from "./FilterBar";
 
-export function CafeBrowser({ cafes }: { cafes: Cafe[] }) {
+export function CafeBrowser({ cafes, renderedAt }: { cafes: Cafe[]; renderedAt: number }) {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [selected, setSelected] = useState<Cafe | null>(null);
-  const now = useNow();
+  const now = useNow(renderedAt);
   const { ids: favorites, toggle } = useFavorites();
   const visible = useMemo(() => applyFilters(cafes, filters, now), [cafes, filters, now]);
   const neighborhoods = useMemo(() => [...new Set(cafes.map((c) => c.neighborhood))].sort(), [cafes]);
