@@ -28,8 +28,8 @@ class Store:
         return {x["google_place_id"]: x["slug"] for x in rows}, {x["slug"] for x in rows}
 
     def upsert_cafe(self, row: dict) -> str:
-        """Upsert on google_place_id; columns absent from row (slug on update,
-        laptop_override always) are left untouched. Returns cafe id."""
+        """Upsert on google_place_id; columns absent from row (laptop_*, serves_food) are left
+        untouched. NOT NULL columns (slug) must always be present, even on update. Returns cafe id."""
         r = self._check(requests.post(
             f"{self.base}/cafes", params={"on_conflict": "google_place_id"},
             headers={**self._headers, "Prefer": "resolution=merge-duplicates,return=representation"},

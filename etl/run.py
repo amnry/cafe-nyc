@@ -100,7 +100,11 @@ def process(place_id: str, places: Places, client, stats: Stats, slugs: dict, ta
     if is_new:
         row["slug"] = build_slug(row["name"], row["address"], place_id, taken)
         taken.add(row["slug"])
-    slug = row.get("slug") or slugs[place_id]
+    else:
+        # Re-send the stored slug unchanged. Omitting it fails: Postgres checks NOT NULL on the
+        # proposed INSERT row before ON CONFLICT DO UPDATE runs. Slugs are still never rebuilt.
+        row["slug"] = slugs[place_id]
+    slug = row["slug"]
     meta = {
         "slug": slug, "is_new": is_new, "pages": pages, "with_websites": with_websites,
         "primary_type": place.get("primaryType"),
