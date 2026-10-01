@@ -1,4 +1,5 @@
 import { MONO_LABEL } from "@/components/bits";
+import { SourceNote } from "@/components/SourceNote";
 import { CafeBrowser } from "@/components/CafeBrowser";
 import { LiveStatus } from "@/components/LiveStatus";
 import { getCafes } from "@/lib/cafes";
@@ -17,11 +18,14 @@ export default async function Home() {
         <p className="mt-2 text-sm text-muted">not home, not the office, scouted cafes in NYC</p>
       </header>
       <CafeBrowser cafes={cafes} renderedAt={fetchedAt} />
-      <footer className="mt-12 flex flex-col gap-1.5 border-t border-line pt-4">
+      <footer className="mt-12 flex items-center gap-3 border-t border-line pt-4">
         <p className={`${MONO_LABEL} text-muted`}>
           Built in/for NYC <span aria-hidden>🗽</span>
         </p>
-        <p className="text-xs text-dim">Data from Google Maps, refreshed every two weeks.</p>
+        <span className="text-dim" aria-hidden>
+          ·
+        </span>
+        <SourceNote />
       </footer>
     </main>
   );
