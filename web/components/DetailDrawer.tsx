@@ -1,12 +1,12 @@
 "use client";
 
 import { ExternalLink, X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { safeWebsite, summaryAttribution, visibleSummary } from "@/lib/drawer";
 import { streetLine } from "@/lib/format";
 import type { OpenStatus } from "@/lib/hours";
 import type { Cafe, TriState } from "@/lib/types";
-import { wifiSummary } from "@/lib/wifi";
+import { isEarlyData, timeAgo, wifiSummary } from "@/lib/wifi";
 import { MapsLink, MONO_LABEL, PriceLevel, Rating, StaleNote, StatusText, TriValue } from "./bits";
 import { WifiTest } from "./WifiTest";
 
@@ -23,6 +23,7 @@ const tri = (v: TriState) => <TriValue value={v} />;
 
 export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: OpenStatus | null; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const [openedAt] = useState(() => Date.now()); // for "Last tested X ago"
 
   useEffect(() => {
     const dialog = ref.current;
@@ -34,6 +35,7 @@ export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: Op
   const site = safeWebsite(cafe.website);
   const address = streetLine(cafe.street_address, cafe.address);
   const wifi = wifiSummary(cafe);
+  const lastTested = timeAgo(cafe.wifi_last_tested_at, openedAt);
 
   return (
     <dialog
@@ -91,9 +93,13 @@ export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: Op
           <Fact label="Reservable">{tri(cafe.reservable)}</Fact>
           <Fact label="WiFi">
             {wifi ? (
-              <span className="text-right text-[13px] tabular-nums">
-                {wifi}
-                {cafe.wifi_latency_ms !== null && <> · {Math.round(cafe.wifi_latency_ms)} ms</>}
+              <span className="flex flex-col items-end text-right">
+                <span className="text-[13px] tabular-nums">
+                  {wifi}
+                  {isEarlyData(cafe) && <> · early data</>}
+                  {cafe.wifi_latency_ms !== null && <> · {Math.round(cafe.wifi_latency_ms)} ms</>}
+                </span>
+                {lastTested && <span className={`${MONO_LABEL} text-muted`}>Last tested {lastTested}</span>}
               </span>
             ) : (
               <span className="text-[13px] text-dim">Untested</span>
