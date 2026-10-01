@@ -20,7 +20,8 @@ import requests
 import config
 import geo
 import haiku
-from classify import is_unclear_name, lookalike_flags
+from address import street_line
+from classify import auto_hide_reason, is_unclear_name, lookalike_flags
 from config import CAFE_PRIMARY_TYPES, SUMMARY_EDITORIAL, SUMMARY_GENERATIVE, SUMMARY_HAIKU
 from places import PRICE_LEVELS, Places, discover
 from slug import build_slug, slugify
@@ -46,6 +47,7 @@ def build_row(place: dict, analysis: haiku.Analysis, summary, source, neighborho
         "google_place_id": place["id"],
         "name": place["displayName"]["text"],
         "address": place.get("formattedAddress"),
+        "street_address": street_line(place.get("addressComponents")),
         "lat": loc.get("latitude"),
         "lng": loc.get("longitude"),
         "neighborhood": neighborhood,
@@ -82,7 +84,7 @@ class OutOfScope(Exception):
     pass
 
 
-def process(place_id: str, places: Places, client, stats: Stats, slugs: dict, taken: set,
+def process(place_id: str, places: Places, client, stats: Stats, existing: dict, taken: set,
             with_websites: bool = False):
     """Shared pipeline. Returns (row, prices, analysis, meta) for report/upsert."""
     place = places.details(place_id)
@@ -101,17 +103,26 @@ def process(place_id: str, places: Places, client, stats: Stats, slugs: dict, ta
     summary, source = pick_summary(place, analysis)
     row = build_row(place, analysis, summary, source, neighborhood)
 
-    is_new = place_id not in slugs
+    is_new = place_id not in existing
     if is_new:
         row["slug"] = build_slug(row["name"], row["address"], place_id, taken)
         taken.add(row["slug"])
     else:
         # Re-send the stored slug unchanged. Omitting it fails: Postgres checks NOT NULL on the
         # proposed INSERT row before ON CONFLICT DO UPDATE runs. Slugs are still never rebuilt.
-        row["slug"] = slugs[place_id]
+        row["slug"] = existing[place_id]["slug"]
     slug = row["slug"]
+
+    # Visibility. A manual decision (hidden_reason 'manual: ...') is never overridden.
+    stored_reason = (existing.get(place_id) or {}).get("hidden_reason") or ""
+    g = haiku.google_summaries(place)
+    auto = auto_hide_reason(row["name"], place.get("primaryType"), [g["generative"], g["editorial"], row["ai_summary"]])
+    if not stored_reason.startswith("manual"):
+        row["hidden"] = auto is not None
+        row["hidden_reason"] = auto
     meta = {
         "slug": slug, "is_new": is_new, "pages": pages, "with_websites": with_websites,
+        "visibility": stored_reason if stored_reason.startswith("manual") else (auto or "shown"),
         "primary_type": place.get("primaryType"),
         "lookalike": lookalike_flags(row["name"], place.get("types")),
     }
@@ -123,7 +134,8 @@ def report(i: int, n: int, query: str | None, row: dict, a: haiku.Analysis, meta
     print(f"  match:    {row['name']} | {row['address']}")
     if query and not name_matches(query, row["name"]):
         print("  WARNING:  NAME MISMATCH")
-    print(f"  area:     {row['neighborhood']}")
+    print(f"  area:     {row['neighborhood']}  |  street: {row['street_address']}")
+    print(f"  visible:  {meta['visibility']}")
     print(f"  type:     {meta['primary_type']}")
     if meta["lookalike"]:
         print(f"  REVIEW:   {', '.join(meta['lookalike'])}")
@@ -167,6 +179,7 @@ def main() -> int:
     ap.add_argument("--with-websites", action="store_true",
                     help="fetch cafe websites and extract menu prices (off by default; prices are out of v1)")
     ap.add_argument("--place-ids", help="comma-separated Google place ids; skips Text Search (use when a name is ambiguous)")
+    ap.add_argument("--all-existing", action="store_true", help="re-run every cafe already in the database")
     ap.add_argument("--limit", type=int, help="process at most N targets (discovery: alphabetical by name)")
     g = ap.add_mutually_exclusive_group()
     g.add_argument("--write", action="store_true", help="upsert to Supabase (default is dry-run)")
@@ -180,12 +193,15 @@ def main() -> int:
     places = Places(env["GOOGLE_PLACES_API_KEY"], stats)
     client = anthropic.Anthropic(api_key=env["ANTHROPIC_API_KEY"])
     store = Store(env["NEXT_PUBLIC_SUPABASE_URL"], env["SUPABASE_SERVICE_ROLE_KEY"])
-    slugs, taken = store.existing_slugs()
+    existing = store.existing()
+    taken = {e["slug"] for e in existing.values()}
 
     # Resolve targets: list of (query or None, place_id)
     targets: list[tuple[str | None, str]] = []
     errors: list[str] = []
-    if args.place_ids:
+    if args.all_existing:
+        targets = [(None, pid) for pid in sorted(existing)]
+    elif args.place_ids:
         targets = [(None, pid.strip()) for pid in args.place_ids.split(",") if pid.strip()]
     elif args.names:
         for name in (n.strip() for n in args.names.split(",") if n.strip()):
@@ -227,12 +243,12 @@ def main() -> int:
     done: list[tuple[dict, dict]] = []  # (row, meta) for the summary table
     for i, (query, pid) in enumerate(targets, 1):
         try:
-            row, analysis, meta = process(pid, places, client, stats, slugs, taken, args.with_websites)
+            row, analysis, meta = process(pid, places, client, stats, existing, taken, args.with_websites)
             report(i, len(targets), query, row, analysis, meta)
             if args.write:
                 cafe_id = store.upsert_cafe(row)
                 store.upsert_prices(cafe_id, analysis.prices)
-                slugs[pid] = meta["slug"]
+                existing[pid] = {"slug": meta["slug"], "hidden_reason": row.get("hidden_reason", existing.get(pid, {}).get("hidden_reason"))}
             processed += 1
             done.append((row, meta))
         except OutOfScope as e:
@@ -255,6 +271,10 @@ def main() -> int:
                   f"{row['neighborhood']:<18} {', '.join(meta['lookalike'])}")
         flagged = sum(1 for _, m in done if m["lookalike"])
         print(f"flagged for review: {flagged}/{len(done)}")
+        hidden = [(r, m) for r, m in done if m["visibility"] != "shown"]
+        print(f"\n--- hidden ({len(hidden)}) ---")
+        for r, m in sorted(hidden, key=lambda d: d[0]["name"]):
+            print(f"{r['name'][:34]:<34} {str(r['street_address'])[:26]:<26} {m['visibility']}")
 
     print("\n--- totals ---")
     hoods: dict[str, int] = {}

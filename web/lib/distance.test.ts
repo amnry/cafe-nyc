@@ -3,7 +3,7 @@ import { distanceMeters, sortByDistance, walkLabel } from "./distance";
 import type { Cafe } from "./types";
 
 const base: Cafe = {
-  id: "1", slug: "a", name: "A", address: null, rating: null, rating_count: null, lat: null, lng: null,
+  id: "1", slug: "a", name: "A", address: null, street_address: null, rating: null, rating_count: null, lat: null, lng: null,
   neighborhood: "West Village", website: null, google_maps_uri: null, price_level: null, business_status: null,
   opening_hours: null, restroom: null, allows_dogs: null, outdoor_seating: null, reservable: null, serves_wine: null,
   ai_summary: null, ai_summary_source: null, google_refreshed_at: null, is_fresh: true,

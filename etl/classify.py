@@ -43,3 +43,23 @@ def is_address_name(name: str | None, address: str | None) -> bool:
 
 def is_unclear_name(name: str | None, address: str | None) -> bool:
     return is_junk_name(name) or is_address_name(name, address)
+
+
+TAKEOUT_ONLY = re.compile(
+    r"\b(take[- ]?out|to[- ]go|grab[- ]and[- ]go|pick[- ]?up|counter[- ]service|window)[- ]only\b"
+    r"|\bno (indoor )?seating\b|\bstanding room only\b|\b(walk[- ]up|takeout) window\b",
+    re.I,
+)
+
+
+def auto_hide_reason(name: str, primary_type: str | None, summaries: list[str | None]) -> str | None:
+    """Why the ETL should hide a place automatically, or None to show it."""
+    if "access required" in (name or "").lower():
+        return "auto: name says access required"
+    t = primary_type or ""
+    if t == "restaurant" or t.endswith("_restaurant") or t in BAR_TYPES:
+        return f"auto: primaryType {t}"
+    for s in summaries:
+        if s and TAKEOUT_ONLY.search(s):
+            return "auto: summary says takeout-only"
+    return None

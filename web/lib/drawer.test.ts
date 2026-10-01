@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { safeWebsite, summaryAttribution, triText } from "./drawer";
+import { safeWebsite, summaryAttribution, triText, visibleSummary } from "./drawer";
 
 describe("summaryAttribution", () => {
   it("labels generative summaries only", () => {
@@ -7,6 +7,15 @@ describe("summaryAttribution", () => {
     expect(summaryAttribution("editorial")).toBeNull();
     expect(summaryAttribution("haiku")).toBeNull();
     expect(summaryAttribution(null)).toBeNull();
+  });
+});
+
+describe("visibleSummary", () => {
+  it("hides haiku summaries, shows Google ones", () => {
+    expect(visibleSummary({ ai_summary: "x", ai_summary_source: "haiku" })).toBeNull();
+    expect(visibleSummary({ ai_summary: "g", ai_summary_source: "generative" })).toBe("g");
+    expect(visibleSummary({ ai_summary: "e", ai_summary_source: "editorial" })).toBe("e");
+    expect(visibleSummary({ ai_summary: null, ai_summary_source: null })).toBeNull();
   });
 });
 

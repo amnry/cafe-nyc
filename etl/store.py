@@ -19,13 +19,12 @@ class Store:
             raise RuntimeError(f"supabase HTTP {r.status_code}: {r.text[:300]}")
         return r
 
-    def existing_slugs(self) -> tuple[dict[str, str], set[str]]:
-        """(place_id -> slug, all slugs)"""
+    def existing(self) -> dict[str, dict]:
+        """place_id -> {slug, hidden_reason} for every stored cafe."""
         r = self._check(requests.get(
-            f"{self.base}/cafes", params={"select": "google_place_id,slug"},
+            f"{self.base}/cafes", params={"select": "google_place_id,slug,hidden_reason"},
             headers=self._headers, timeout=30))
-        rows = r.json()
-        return {x["google_place_id"]: x["slug"] for x in rows}, {x["slug"] for x in rows}
+        return {x["google_place_id"]: {"slug": x["slug"], "hidden_reason": x["hidden_reason"]} for x in r.json()}
 
     def upsert_cafe(self, row: dict) -> str:
         """Upsert on google_place_id; columns absent from row (laptop_*, serves_food) are left

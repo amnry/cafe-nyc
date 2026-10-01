@@ -3,7 +3,7 @@ import { activeFilterCount, applyFilters, DEFAULT_FILTERS, priceTier } from "./f
 import type { Cafe } from "./types";
 
 const base: Cafe = {
-  id: "1", slug: "a", name: "A", address: null, rating: null, rating_count: null, lat: null, lng: null, neighborhood: "West Village", website: null,
+  id: "1", slug: "a", name: "A", address: null, street_address: null, rating: null, rating_count: null, lat: null, lng: null, neighborhood: "West Village", website: null,
   google_maps_uri: null, price_level: 2, business_status: "OPERATIONAL", opening_hours: null,
   restroom: true, allows_dogs: false, outdoor_seating: null, reservable: null, serves_wine: null,
   ai_summary: null, ai_summary_source: null, google_refreshed_at: null, is_fresh: true,

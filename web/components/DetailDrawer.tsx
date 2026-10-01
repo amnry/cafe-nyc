@@ -2,8 +2,8 @@
 
 import { ExternalLink, X } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { safeWebsite, summaryAttribution } from "@/lib/drawer";
-import { shortAddress } from "@/lib/format";
+import { safeWebsite, summaryAttribution, visibleSummary } from "@/lib/drawer";
+import { streetLine } from "@/lib/format";
 import type { OpenStatus } from "@/lib/hours";
 import type { Cafe, TriState } from "@/lib/types";
 import { MapsLink, MONO_LABEL, PriceLevel, Rating, StaleNote, StatusText, TriValue } from "./bits";
@@ -27,9 +27,10 @@ export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: Op
     if (dialog && !dialog.open) dialog.showModal();
   }, []);
 
+  const summary = visibleSummary(cafe);
   const attribution = summaryAttribution(cafe.ai_summary_source);
   const site = safeWebsite(cafe.website);
-  const address = shortAddress(cafe.address);
+  const address = streetLine(cafe.street_address, cafe.address);
 
   return (
     <dialog
@@ -73,9 +74,9 @@ export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: Op
           <StaleNote cafe={cafe} />
         </div>
 
-        {cafe.ai_summary && (
+        {summary && (
           <blockquote className="mt-5 border-l-2 border-accent bg-surface-2 px-3 py-2.5">
-            <p className="leading-relaxed text-foreground/90 italic">{cafe.ai_summary}</p>
+            <p className="leading-relaxed text-foreground/90 italic">{summary}</p>
             {attribution && <p className={`${MONO_LABEL} mt-2 text-[9px] text-dim`}>{attribution}</p>}
           </blockquote>
         )}

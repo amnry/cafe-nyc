@@ -18,6 +18,7 @@ export interface Cafe {
   slug: string;
   name: string;
   address: string | null;
+  street_address: string | null; // "204 W 10th St", from Places addressComponents
   rating: number | null;
   rating_count: number | null;
   lat: number | null;

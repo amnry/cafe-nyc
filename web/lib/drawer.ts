@@ -1,6 +1,11 @@
-import type { AiSummarySource, TriState } from "./types";
+import type { AiSummarySource, Cafe, TriState } from "./types";
 
 export const GEMINI_LABEL = "Summarized with Gemini";
+
+/** Summary to show, or null. Haiku fallback summaries are kept in the data but not shown. */
+export function visibleSummary(cafe: Pick<Cafe, "ai_summary" | "ai_summary_source">): string | null {
+  return cafe.ai_summary_source === "haiku" ? null : cafe.ai_summary;
+}
 
 /** Only Google's generative summaries carry the required Gemini label; editorial and Haiku do not. */
 export function summaryAttribution(source: AiSummarySource | null): string | null {

@@ -4,6 +4,11 @@ export function shortAddress(address: string | null): string | null {
   return first || null;
 }
 
+/** Street line for display: the ETL's addressComponents-based value, else the first address segment. */
+export function streetLine(street: string | null, address: string | null): string | null {
+  return street || shortAddress(address);
+}
+
 export function formatCount(n: number): string {
   return n.toLocaleString("en-US");
 }

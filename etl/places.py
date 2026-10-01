@@ -13,6 +13,7 @@ DETAILS_MASK = ",".join([
     "rating", "userRatingCount", "priceLevel", "businessStatus", "regularOpeningHours",
     "restroom", "allowsDogs", "outdoorSeating", "reservable", "servesWine",
     "generativeSummary", "editorialSummary", "primaryTypeDisplayName", "primaryType", "types",
+    "reviews", "addressComponents",
 ])
 SEARCH_MASK = "places.id,places.displayName,places.formattedAddress,places.location,places.primaryType"
 

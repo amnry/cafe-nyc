@@ -1,6 +1,6 @@
 import { Heart } from "lucide-react";
-import { summaryAttribution } from "@/lib/drawer";
-import { shortAddress } from "@/lib/format";
+import { summaryAttribution, visibleSummary } from "@/lib/drawer";
+import { streetLine } from "@/lib/format";
 import type { OpenStatus } from "@/lib/hours";
 import type { Cafe, TriState } from "@/lib/types";
 import { MapsLink, MONO_LABEL, OUTLINE_BUTTON, PriceLevel, Rating, StaleNote, StatusText, TriValue } from "./bits";
@@ -30,7 +30,8 @@ export function CafeCard({ cafe, status, walk, favorite, onToggleFavorite, onSel
   onToggleFavorite: (id: string) => void;
   onSelect: (cafe: Cafe) => void;
 }) {
-  const address = shortAddress(cafe.address);
+  const address = streetLine(cafe.street_address, cafe.address);
+  const summary = visibleSummary(cafe);
   const attribution = summaryAttribution(cafe.ai_summary_source);
   return (
     <article
@@ -83,9 +84,9 @@ export function CafeCard({ cafe, status, walk, favorite, onToggleFavorite, onSel
         <TriRow label="Outdoor" value={cafe.outdoor_seating} />
       </dl>
 
-      {cafe.ai_summary && (
+      {summary && (
         <blockquote className="border-l-2 border-accent bg-surface-2 px-2.5 py-1.5">
-          <p className="line-clamp-3 text-[13px] leading-snug text-foreground/90 italic">{cafe.ai_summary}</p>
+          <p className="line-clamp-3 text-[13px] leading-snug text-foreground/90 italic">{summary}</p>
           {attribution && <p className={`${MONO_LABEL} mt-1.5 text-[9px] text-dim`}>{attribution}</p>}
         </blockquote>
       )}
