@@ -4,7 +4,8 @@
   python run.py --place-ids "X,Y"  Skip search, use exact Google place ids
   python run.py                    Nearby Search grid discovery over West Village + Greenwich Village
 
-Both feed the same pipeline: place details -> website -> Haiku (prices, fallback summary) -> upsert.
+Both feed the same pipeline: place details -> Haiku (fallback summary) -> upsert.
+Website fetching and price extraction are off; enable with --with-websites.
 Dry-run is the default; nothing is written to Supabase without --write.
 """
 import argparse
@@ -78,7 +79,8 @@ class OutOfScope(Exception):
     pass
 
 
-def process(place_id: str, places: Places, client, stats: Stats, slugs: dict, taken: set):
+def process(place_id: str, places: Places, client, stats: Stats, slugs: dict, taken: set,
+            with_websites: bool = False):
     """Shared pipeline. Returns (row, prices, analysis, meta) for report/upsert."""
     place = places.details(place_id)
     loc = place.get("location") or {}
@@ -86,8 +88,10 @@ def process(place_id: str, places: Places, client, stats: Stats, slugs: dict, ta
     if neighborhood is None:
         raise OutOfScope(f"{place['displayName']['text']} | {place.get('formattedAddress')} is outside "
                          "West Village / Greenwich Village NTAs")
-    pages = fetch_site(place.get("websiteUri"), stats)
-    analysis = haiku.analyze(client, stats, place, pages)
+    pages = fetch_site(place.get("websiteUri"), stats) if with_websites else []
+    g = haiku.google_summaries(place)
+    analysis = haiku.analyze(client, stats, place, pages, need_summary=not (g["generative"] or g["editorial"]),
+                             extract_prices=with_websites)
     summary, source = pick_summary(place, analysis)
     row = build_row(place, analysis, summary, source, neighborhood)
 
@@ -96,7 +100,7 @@ def process(place_id: str, places: Places, client, stats: Stats, slugs: dict, ta
         row["slug"] = build_slug(row["name"], row["address"], place_id, taken)
         taken.add(row["slug"])
     slug = row.get("slug") or slugs[place_id]
-    meta = {"slug": slug, "is_new": is_new, "pages": pages}
+    meta = {"slug": slug, "is_new": is_new, "pages": pages, "with_websites": with_websites}
     return row, analysis, meta
 
 
@@ -111,13 +115,14 @@ def report(i: int, n: int, query: str | None, row: dict, a: haiku.Analysis, meta
     pl = row["price_level"]
     print(f"  price:    {'unknown' if pl is None else '$' * max(pl, 1) + f' (level {pl})'}")
     print(f"  icons:    restroom={tri(row['restroom'])}  dogs={tri(row['allows_dogs'])}")
-    if a.prices:
-        print("  prices:   " + "; ".join(f"{p['item']} ${p['price_cents'] / 100:.2f} <{p['source_url']}>" for p in a.prices))
-    else:
-        print("  prices:   none found")
-    print(f"  summary:  source={row['ai_summary_source']}")
-    chars = sum(len(p.text) for p in meta["pages"])
-    print(f"  website:  {len(meta['pages'])} page(s), {chars:,} chars")
+    if meta["with_websites"]:
+        if a.prices:
+            print("  prices:   " + "; ".join(f"{p['item']} ${p['price_cents'] / 100:.2f} <{p['source_url']}>" for p in a.prices))
+        else:
+            print("  prices:   none found")
+        chars = sum(len(p.text) for p in meta["pages"])
+        print(f"  website:  {len(meta['pages'])} page(s), {chars:,} chars")
+    print(f"  summary:  source={row['ai_summary_source']}" + (f"  \"{row['ai_summary']}\"" if row["ai_summary_source"] == "haiku" else ""))
     for f in a.flags:
         print(f"  flag:     {f}")
 
@@ -125,6 +130,8 @@ def report(i: int, n: int, query: str | None, row: dict, a: haiku.Analysis, meta
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--names", help='comma-separated cafe names, e.g. "A,B,C"')
+    ap.add_argument("--with-websites", action="store_true",
+                    help="fetch cafe websites and extract menu prices (off by default; prices are out of v1)")
     ap.add_argument("--place-ids", help="comma-separated Google place ids; skips Text Search (use when a name is ambiguous)")
     g = ap.add_mutually_exclusive_group()
     g.add_argument("--write", action="store_true", help="upsert to Supabase (default is dry-run)")
@@ -172,7 +179,7 @@ def main() -> int:
     processed = 0
     for i, (query, pid) in enumerate(targets, 1):
         try:
-            row, analysis, meta = process(pid, places, client, stats, slugs, taken)
+            row, analysis, meta = process(pid, places, client, stats, slugs, taken, args.with_websites)
             report(i, len(targets), query, row, analysis, meta)
             if args.write:
                 cafe_id = store.upsert_cafe(row)
