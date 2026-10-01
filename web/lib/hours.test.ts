@@ -14,7 +14,7 @@ const weekdays = [1, 2, 3, 4, 5].map((d) => P(d, 8, 0, d, 17, 0));
 
 describe("getOpenStatus: ordinary hours", () => {
   it("open mid-day, shows closing time", () => {
-    expect(getOpenStatus(weekdays, at(2, 12))).toEqual({ state: "open", label: "Open · closes 5 PM", short: "Open · til 5PM", closesAt: "5 PM" });
+    expect(getOpenStatus(weekdays, at(2, 12))).toEqual({ state: "open", label: "Open · closes 5 PM", short: "Open · till 5PM", closesAt: "5 PM" });
   });
   it("open exactly at opening, closed exactly at closing", () => {
     expect(getOpenStatus(weekdays, at(2, 8)).state).toBe("open");
@@ -135,7 +135,7 @@ describe("card short labels", () => {
     expect(getOpenStatus(weekdays, at(2, 7)).short).toBe("Closed · back at 8AM");
     expect(getOpenStatus(weekdays, at(2, 20)).short).toBe("Closed · back Wed 8AM");
     expect(getOpenStatus(weekdays, at(2, 20)).label).toBe("Closed · back Wed 8 AM");
-    expect(getOpenStatus([P(1, 8, 0, 1, 17, 30)], at(1, 9)).short).toBe("Open · til 5:30PM");
+    expect(getOpenStatus([P(1, 8, 0, 1, 17, 30)], at(1, 9)).short).toBe("Open · till 5:30PM");
     expect(getOpenStatus(null, at(1, 9)).short).toBe("Hours unavailable");
   });
 });

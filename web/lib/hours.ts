@@ -6,7 +6,7 @@ const MIN_PER_WEEK = 7 * MIN_PER_DAY;
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export type OpenStatus =
-  // label: drawer text ("Open · closes 5 PM"); short: card text ("Open · til 5PM")
+  // label: drawer text ("Open · closes 5 PM"); short: card text ("Open · till 5PM")
   | { state: "open"; label: string; short: string; closesAt: string | null } // closesAt null = open 24 hours
   | { state: "closed"; label: string; short: string; opensAt: string | null }
   | { state: "unknown"; label: string; short: string }; // no hours data: never shown as closed
@@ -83,7 +83,7 @@ export function getOpenStatus(periods: HoursPeriod[] | null, now: Date = new Dat
       return { state: "open", label: "Open 24 hours", short: "Open 24 hours", closesAt: null };
     }
     const closesAt = formatTime(current[1] % MIN_PER_DAY);
-    const short = `Open · til ${formatTime(current[1] % MIN_PER_DAY, true)}`;
+    const short = `Open · till ${formatTime(current[1] % MIN_PER_DAY, true)}`;
     return { state: "open", label: `Open · closes ${closesAt}`, short, closesAt };
   }
 
