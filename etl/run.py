@@ -18,7 +18,7 @@ import anthropic
 import config
 import geo
 import haiku
-from classify import lookalike_flags
+from classify import is_junk_name, lookalike_flags
 from config import CAFE_PRIMARY_TYPES, SUMMARY_EDITORIAL, SUMMARY_GENERATIVE, SUMMARY_HAIKU
 from places import PRICE_LEVELS, Places, discover
 from slug import build_slug, slugify
@@ -84,6 +84,9 @@ def process(place_id: str, places: Places, client, stats: Stats, slugs: dict, ta
             with_websites: bool = False):
     """Shared pipeline. Returns (row, prices, analysis, meta) for report/upsert."""
     place = places.details(place_id)
+    if is_junk_name((place.get("displayName") or {}).get("text")):
+        raise OutOfScope(f"{place_id} | {place.get('formattedAddress')} has a placeholder name "
+                         f"{(place.get('displayName') or {}).get('text')!r}")
     loc = place.get("location") or {}
     neighborhood = geo.neighborhood_for(loc.get("latitude", 0), loc.get("longitude", 0))
     if neighborhood is None:
@@ -180,7 +183,7 @@ def main() -> int:
         circles = geo.grid_circles()
         print(f"discovery: {len(circles)} circles of {config.GRID_RADIUS_M} m")
         found = discover(places, circles)
-        outside = wrong_type = 0
+        outside = wrong_type = junk = 0
         kept = []
         for pid, p in found.items():
             loc = p.get("location") or {}
@@ -188,11 +191,13 @@ def main() -> int:
                 outside += 1
             elif p.get("primaryType") not in CAFE_PRIMARY_TYPES:
                 wrong_type += 1
+            elif is_junk_name((p.get("displayName") or {}).get("text")):
+                junk += 1
             else:
                 kept.append(((p.get("displayName") or {}).get("text", ""), pid))
         targets = [(None, pid) for _, pid in sorted(kept)]
         print(f"discovery: {len(found)} unique places; {outside} outside NTAs, {wrong_type} wrong primaryType, "
-              f"{len(targets)} kept")
+              f"{junk} placeholder names, {len(targets)} kept")
     if args.limit is not None:
         targets = targets[: args.limit]
 

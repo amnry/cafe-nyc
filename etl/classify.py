@@ -23,3 +23,8 @@ def lookalike_flags(name: str, types: list[str] | None) -> list[str]:
     if "bubble_tea_store" in ts or BUBBLE_TEA_NAMES.search(name):
         flags.append("bubble tea?")
     return flags
+
+
+def is_junk_name(name: str | None) -> bool:
+    """Names with fewer than 2 letters/digits ('.', '-', '') are placeholder listings, not cafes."""
+    return len(re.findall(r"[^\W_]", name or "")) < 2

@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from classify import lookalike_flags
+from classify import is_junk_name, lookalike_flags
 
 
 def test_plain_cafe_is_clean():
@@ -26,3 +26,12 @@ def test_flags_by_name():
     assert lookalike_flags("Boba Guys", ["cafe"]) == ["bubble tea?"]
     assert lookalike_flags("Caffe Reggio Wine Lounge", ["cafe"]) == ["bar?"]
     assert lookalike_flags("Mah-Ze-Dahr Bakery", ["cafe"]) == ["bakery?"]
+
+
+def test_junk_names():
+    assert is_junk_name(".")
+    assert is_junk_name(" - ")
+    assert is_junk_name("")
+    assert is_junk_name(None)
+    for ok in ["Koké", "Semm", "OCAFE", "12 Matcha", "787 Coffee"]:
+        assert not is_junk_name(ok)
