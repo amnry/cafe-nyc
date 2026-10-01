@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
 import { Barlow_Condensed, Geist, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
@@ -22,7 +23,8 @@ const TITLE = "Find your 3rd place · NYC";
 const DESCRIPTION = "Not home, not the office. Scouted cafes in NYC for working, meeting and studying.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://cafe-nyc.vercel.app"),
+  // Production origin. Relative metadata URLs (og:url, og:image, twitter:image) resolve against it.
+  metadataBase: new URL("https://3rdplacenyc.com"),
   title: TITLE,
   description: DESCRIPTION,
   // og:image / twitter:image come from app/opengraph-image.tsx and app/twitter-image.tsx
@@ -47,7 +49,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${mono.variable} ${display.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }

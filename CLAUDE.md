@@ -1,4 +1,5 @@
 # Project: remote-work cafe directory (NYC)
+Production: https://3rdplacenyc.com (Vercel, root directory `web`; cafe-nyc.vercel.app is the Vercel alias).
 Directory of cafes for remote workers. V1 = West Village + Greenwich Village (official NYC NTA boundaries), ~100-150 cafes.
 Users filter cafes here, then click through to Google Maps. That's the whole product.
 
