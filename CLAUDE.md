@@ -9,9 +9,9 @@ Users filter cafes here, then click through to Google Maps. That's the whole pro
 - /supabase/migrations: all schema changes as SQL migrations.
 
 ## Decisions (do not change without asking)
-- Card icons: restroom / dogs, each tri-state yes | no | unknown. Unknown is never shown as no.
-- Card: name, $ level, restroom + dogs icons, open now + closing time, Google Maps button.
-- Detail drawer: AI summary, outdoor seating, wine, reservable, website. Food is out of scope. Only ai_summary_source = 'generative' gets the "Summarized with Gemini" label. Rows with is_fresh = false stay visible with a small "may be outdated" note.
+- Card icons: restroom / dogs / outdoor seating (Lucide Toilet / Dog / Trees), each tri-state yes | no | unknown. yes = accent glow, no = dimmed + slash, unknown = not rendered (never shown as no). Filter chips for restroom and dogs reuse the icons.
+- Card: name, rating, $ level, restroom + dogs + outdoor icons, open now + closing time, Google Maps button.
+- Detail drawer: AI summary, outdoor seating, wine, reservable, website. Food is out of scope. Only ai_summary_source = 'generative' gets the footnote "The description above: Summarized with Gemini" (drawer only, below the Maps button; never on the card). Rows with is_fresh = false stay visible with a small "may be outdated" note.
 - Filters: restroom, dogs, open now, price level.
 - Laptop data is not shown anywhere in v1. The laptop* DB columns stay (no migration) but the ETL does not fill them and the site must not read them.
 - Prices are not shown or read anywhere in v1. The menu_prices table and cafes_public.prices / latte_price_cents stay (no migration); the ETL's website fetch + price extraction is behind `--with-websites`, off by default. The web app must not read prices, latte_price_cents, or laptop.

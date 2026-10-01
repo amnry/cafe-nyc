@@ -1,9 +1,10 @@
 import { Heart } from "lucide-react";
-import { summaryAttribution, visibleSummary } from "@/lib/drawer";
+import { visibleSummary } from "@/lib/drawer";
 import { streetLine } from "@/lib/format";
 import type { OpenStatus } from "@/lib/hours";
-import type { Cafe, TriState } from "@/lib/types";
-import { MapsLink, MONO_LABEL, OUTLINE_BUTTON, PriceLevel, Rating, StaleNote, StatusText, TriValue } from "./bits";
+import type { Cafe } from "@/lib/types";
+import { AttrIcon } from "./AttrIcon";
+import { MapsLink, MONO_LABEL, OUTLINE_BUTTON, PriceLevel, Rating, StaleNote, StatusText } from "./bits";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -11,14 +12,6 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       <dt className={`${MONO_LABEL} text-muted`}>{label}</dt>
       <dd>{children}</dd>
     </div>
-  );
-}
-
-function TriRow({ label, value }: { label: string; value: TriState }) {
-  return (
-    <Row label={label}>
-      <TriValue value={value} />
-    </Row>
   );
 }
 
@@ -32,7 +25,6 @@ export function CafeCard({ cafe, status, walk, favorite, onToggleFavorite, onSel
 }) {
   const address = streetLine(cafe.street_address, cafe.address);
   const summary = visibleSummary(cafe);
-  const attribution = summaryAttribution(cafe.ai_summary_source);
   return (
     <article
       className="cafe-card relative flex flex-col gap-2 border border-line bg-surface p-3"
@@ -69,25 +61,29 @@ export function CafeCard({ cafe, status, walk, favorite, onToggleFavorite, onSel
         {address && <> · {address}</>}
       </p>
 
-      <div className="flex items-center gap-3">
+      {/* Fixed height so cards stay level whichever icons are unknown (and so are not drawn). */}
+      <div className="flex h-6 items-center gap-3">
         <Rating cafe={cafe} />
         <PriceLevel level={cafe.price_level} />
-        {walk && <span className="ml-auto font-mono text-[11px] text-accent">{walk}</span>}
+        <div className="ml-auto flex items-center">
+          <AttrIcon kind="restroom" value={cafe.restroom} />
+          <AttrIcon kind="dogs" value={cafe.allows_dogs} />
+          <AttrIcon kind="outdoor" value={cafe.outdoor_seating} />
+        </div>
       </div>
 
-      <dl className="flex flex-col gap-1">
+      <dl>
         <Row label="Hours">
-          <StatusText status={status} />
+          <span className="flex items-center justify-between gap-2">
+            <StatusText status={status} />
+            {walk && <span className="font-mono text-[11px] text-accent">{walk}</span>}
+          </span>
         </Row>
-        <TriRow label="Restroom" value={cafe.restroom} />
-        <TriRow label="Dogs" value={cafe.allows_dogs} />
-        <TriRow label="Outdoor" value={cafe.outdoor_seating} />
       </dl>
 
       {summary && (
         <blockquote className="border-l-2 border-accent bg-surface-2 px-2.5 py-1.5">
           <p className="line-clamp-3 text-[13px] leading-snug text-foreground/90 italic">{summary}</p>
-          {attribution && <p className={`${MONO_LABEL} mt-1.5 text-[9px] text-dim`}>{attribution}</p>}
         </blockquote>
       )}
 

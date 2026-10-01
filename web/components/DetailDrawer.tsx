@@ -77,7 +77,6 @@ export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: Op
         {summary && (
           <blockquote className="mt-5 border-l-2 border-accent bg-surface-2 px-3 py-2.5">
             <p className="leading-relaxed text-foreground/90 italic">{summary}</p>
-            {attribution && <p className={`${MONO_LABEL} mt-2 text-[9px] text-dim`}>{attribution}</p>}
           </blockquote>
         )}
 
@@ -104,6 +103,7 @@ export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: Op
 
         <div className="mt-auto pt-6">
           <MapsLink cafe={cafe} />
+          {attribution && <p className={`${MONO_LABEL} mt-4 text-[9px] text-dim`}>{attribution}</p>}
         </div>
       </div>
     </dialog>

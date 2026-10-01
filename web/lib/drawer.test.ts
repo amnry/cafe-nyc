@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { safeWebsite, summaryAttribution, triText, visibleSummary } from "./drawer";
+import { safeWebsite, summaryAttribution, triText, triWord, visibleSummary } from "./drawer";
+
+describe("triWord", () => {
+  it("maps tri-state to yes / no / unknown", () => {
+    expect(triWord(true)).toBe("yes");
+    expect(triWord(false)).toBe("no");
+    expect(triWord(null)).toBe("unknown");
+  });
+});
 
 describe("summaryAttribution", () => {
   it("labels generative summaries only", () => {
-    expect(summaryAttribution("generative")).toBe("Summarized with Gemini");
+    expect(summaryAttribution("generative")).toBe("The description above: Summarized with Gemini");
     expect(summaryAttribution("editorial")).toBeNull();
     expect(summaryAttribution("haiku")).toBeNull();
     expect(summaryAttribution(null)).toBeNull();

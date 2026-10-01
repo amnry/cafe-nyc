@@ -1,6 +1,6 @@
 import type { AiSummarySource, Cafe, TriState } from "./types";
 
-export const GEMINI_LABEL = "Summarized with Gemini";
+export const GEMINI_LABEL = "The description above: Summarized with Gemini";
 
 /** Summary to show, or null. Haiku fallback summaries are kept in the data but not shown. */
 export function visibleSummary(cafe: Pick<Cafe, "ai_summary" | "ai_summary_source">): string | null {
@@ -22,6 +22,11 @@ export function safeWebsite(url: string | null): { href: string; host: string } 
   } catch {
     return null;
   }
+}
+
+/** Lowercase answer for icon labels ("Restroom: yes"). */
+export function triWord(v: TriState): "yes" | "no" | "unknown" {
+  return v === true ? "yes" : v === false ? "no" : "unknown";
 }
 
 /** Display text. Unknown is never "No": it reads as a nudge to ask. */

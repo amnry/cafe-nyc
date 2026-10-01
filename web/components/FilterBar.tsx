@@ -4,6 +4,7 @@ import { activeFilterCount, DEFAULT_FILTERS, type Filters } from "@/lib/filters"
 import { spotsLabel } from "@/lib/live";
 import type { GeoStatus } from "@/lib/useGeolocation";
 import type { View } from "@/lib/useView";
+import { AttrGlyph } from "./AttrIcon";
 import { MONO_LABEL } from "./bits";
 
 /** A tray of segments. Groups related filters; slightly rounded, not pills. */
@@ -29,7 +30,7 @@ function Chip({ pressed, onClick, children, label }: {
       aria-label={label}
       onClick={onClick}
       className={
-        "relative rounded-md px-3 py-1.5 text-[13px] leading-5 font-medium " +
+        "relative inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] leading-5 font-medium " +
         "transition-colors duration-150 motion-reduce:transition-none " +
         "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent " +
         (pressed
@@ -74,8 +75,14 @@ export function FilterBar({ filters, onChange, neighborhoods, shown, total, onSu
         </Segment>
         <Segment label="Amenities">
           <Chip pressed={filters.openNow} onClick={() => onChange({ ...filters, openNow: !filters.openNow })}>Open now</Chip>
-          <Chip pressed={filters.restroom} onClick={() => onChange({ ...filters, restroom: !filters.restroom })}>Restroom</Chip>
-          <Chip pressed={filters.dogs} onClick={() => onChange({ ...filters, dogs: !filters.dogs })}>Dogs OK</Chip>
+          <Chip pressed={filters.restroom} onClick={() => onChange({ ...filters, restroom: !filters.restroom })}>
+            <AttrGlyph kind="restroom" />
+            Restroom
+          </Chip>
+          <Chip pressed={filters.dogs} onClick={() => onChange({ ...filters, dogs: !filters.dogs })}>
+            <AttrGlyph kind="dogs" />
+            Dogs OK
+          </Chip>
         </Segment>
         <Segment label="Price">
           {[1, 2, 3, 4].map((tier) => (
