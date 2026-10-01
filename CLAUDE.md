@@ -15,7 +15,8 @@ Users filter cafes here, then click through to Google Maps. That's the whole pro
 - Laptop data is not shown anywhere in v1. The laptop* DB columns stay (no migration) but the ETL does not fill them and the site must not read them.
 - Prices are not shown or read anywhere in v1. The menu_prices table and cafes_public.prices / latte_price_cents stay (no migration); the ETL's website fetch + price extraction is behind `--with-websites`, off by default. The web app must not read prices, latte_price_cents, or laptop.
 - Neighborhood = whichever NTA polygon (West Village or Greenwich Village) contains the cafe; boundaries in /etl/data. Cafes outside both are skipped.
-- Grid view default; map (Google Maps JS) lazy-loaded only when user opens it.
+- Grid view default; map (Google Maps JS) lazy-loaded only when user opens it. View lives in the URL (?view=map). Base map is visually muted; pins carry the color. Key: NEXT_GOOGLE_MAPS_API_KEY (passed from the server; must be HTTP-referrer restricted).
+- Default order: rating desc, then review count. "Near me" sorts by distance with "N min walk" (~80 m/min); on by default only if geolocation permission was already granted. Location stays in browser memory: never sent, logged, or stored.
 - All times computed in America/New_York.
 - Never store raw Google review text. The ETL does not even fetch reviews; store only derived labels.
 - ETL runs biweekly; Google data must not be older than 30 days.

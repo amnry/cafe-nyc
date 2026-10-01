@@ -2,6 +2,8 @@
 
 import { activeFilterCount, DEFAULT_FILTERS, type Filters } from "@/lib/filters";
 import { spotsLabel } from "@/lib/live";
+import type { GeoStatus } from "@/lib/useGeolocation";
+import type { View } from "@/lib/useView";
 import { MONO_LABEL } from "./bits";
 
 /** A tray of segments. Groups related filters; slightly rounded, not pills. */
@@ -41,9 +43,11 @@ function Chip({ pressed, onClick, children, label }: {
   );
 }
 
-export function FilterBar({ filters, onChange, neighborhoods, shown, total, onSurprise }: {
+export function FilterBar({ filters, onChange, neighborhoods, shown, total, onSurprise, view, onViewChange, nearMe, onNearMe }: {
   filters: Filters; onChange: (f: Filters) => void; neighborhoods: string[]; shown: number; total: number;
   onSurprise: () => void;
+  view: View; onViewChange: (v: View) => void;
+  nearMe: GeoStatus; onNearMe: () => void;
 }) {
   const toggleNeighborhood = (name: string) =>
     onChange({
@@ -86,7 +90,16 @@ export function FilterBar({ filters, onChange, neighborhoods, shown, total, onSu
           </button>
         )}
       </div>
-      <div className="flex items-center gap-4 sm:ml-auto">
+      <div className="flex flex-wrap items-center gap-2 sm:ml-auto sm:gap-3">
+        <Segment label="Sort">
+          <Chip pressed={nearMe === "on"} onClick={onNearMe} label={nearMe === "on" ? "Near me (on), tap to sort by rating" : "Sort by distance from me"}>
+            {nearMe === "locating" ? "Locating…" : "Near me"}
+          </Chip>
+        </Segment>
+        <Segment label="View">
+          <Chip pressed={view === "grid"} onClick={() => onViewChange("grid")}>Grid</Chip>
+          <Chip pressed={view === "map"} onClick={() => onViewChange("map")}>Map</Chip>
+        </Segment>
         <button
           type="button"
           onClick={onSurprise}

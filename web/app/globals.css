@@ -67,3 +67,11 @@ body:has(dialog[open]) {
     translate: none;
   }
 }
+
+/* Map is context, not content (people open Google Maps for directions): mute the base
+   layer so cafe pins (DOM markers) carry the color. Vector maps draw on a canvas; the
+   raster fallback (no WebGL) uses /maps/vt tile images. Logo and controls stay untouched. */
+.cafe-map canvas,
+.cafe-map img[src*="/maps/vt"] {
+  filter: grayscale(0.5) brightness(0.75) contrast(1.075); /* half strength */
+}

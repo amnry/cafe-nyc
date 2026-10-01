@@ -22,9 +22,10 @@ function TriRow({ label, value }: { label: string; value: TriState }) {
   );
 }
 
-export function CafeCard({ cafe, status, favorite, onToggleFavorite, onSelect }: {
+export function CafeCard({ cafe, status, walk, favorite, onToggleFavorite, onSelect }: {
   cafe: Cafe;
   status: OpenStatus | null;
+  walk: string | null; // "6 min walk" when near-me is on
   favorite: boolean;
   onToggleFavorite: (id: string) => void;
   onSelect: (cafe: Cafe) => void;
@@ -70,6 +71,7 @@ export function CafeCard({ cafe, status, favorite, onToggleFavorite, onSelect }:
       <div className="flex items-center gap-3">
         <Rating cafe={cafe} />
         <PriceLevel level={cafe.price_level} />
+        {walk && <span className="ml-auto font-mono text-[11px] text-accent">{walk}</span>}
       </div>
 
       <dl className="flex flex-col gap-1">

@@ -20,6 +20,6 @@ export function safeWebsite(url: string | null): { href: string; host: string } 
 }
 
 /** Display text. Unknown is never "No": it reads as a nudge to ask. */
-export function triText(v: TriState): "Yes" | "No" | "Ask the barista" {
-  return v === true ? "Yes" : v === false ? "No" : "Ask the barista";
+export function triText(v: TriState): "Yes" | "No" | "Ask your barista" {
+  return v === true ? "Yes" : v === false ? "No" : "Ask your barista";
 }
