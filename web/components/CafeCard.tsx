@@ -47,12 +47,16 @@ export function MapsButton({ cafe }: { cafe: Cafe }) {
   );
 }
 
-export function CafeCard({ cafe, status }: { cafe: Cafe; status: OpenStatus | null }) {
+export function CafeCard({ cafe, status, onSelect }: { cafe: Cafe; status: OpenStatus | null; onSelect: (cafe: Cafe) => void }) {
   return (
     <article className="flex flex-col gap-3 rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-base font-semibold leading-snug">{cafe.name}</h2>
+          <h2 className="text-base font-semibold leading-snug">
+            <button type="button" onClick={() => onSelect(cafe)} className="text-left hover:underline">
+              {cafe.name}
+            </button>
+          </h2>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">{cafe.neighborhood}</p>
         </div>
         <PriceLevel level={cafe.price_level} />
@@ -65,8 +69,15 @@ export function CafeCard({ cafe, status }: { cafe: Cafe; status: OpenStatus | nu
         <StatusText status={status} />
         <StaleNote cafe={cafe} />
       </div>
-      <div className="mt-auto">
+      <div className="mt-auto flex flex-wrap gap-2">
         <MapsButton cafe={cafe} />
+        <button
+          type="button"
+          onClick={() => onSelect(cafe)}
+          className="rounded-lg border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+        >
+          Details
+        </button>
       </div>
     </article>
   );

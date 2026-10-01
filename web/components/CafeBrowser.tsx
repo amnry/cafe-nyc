@@ -6,10 +6,12 @@ import { getOpenStatus } from "@/lib/hours";
 import type { Cafe } from "@/lib/types";
 import { useNow } from "@/lib/useNow";
 import { CafeCard } from "./CafeCard";
+import { DetailDrawer } from "./DetailDrawer";
 import { FilterBar } from "./FilterBar";
 
 export function CafeBrowser({ cafes }: { cafes: Cafe[] }) {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [selected, setSelected] = useState<Cafe | null>(null);
   const now = useNow();
   const visible = useMemo(() => applyFilters(cafes, filters, now), [cafes, filters, now]);
 
@@ -26,9 +28,17 @@ export function CafeBrowser({ cafes }: { cafes: Cafe[] }) {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((c) => (
-            <CafeCard key={c.id} cafe={c} status={now ? getOpenStatus(c.opening_hours, now) : null} />
+            <CafeCard key={c.id} cafe={c} status={now ? getOpenStatus(c.opening_hours, now) : null} onSelect={setSelected} />
           ))}
         </div>
+      )}
+      {selected && (
+        <DetailDrawer
+          key={selected.id}
+          cafe={selected}
+          status={now ? getOpenStatus(selected.opening_hours, now) : null}
+          onClose={() => setSelected(null)}
+        />
       )}
     </div>
   );
