@@ -2,7 +2,7 @@ import time
 
 import requests
 
-from config import NEARBY_MAX_RESULTS
+from config import CAFE_PRIMARY_TYPES, NEARBY_MAX_RESULTS
 from geo import bounds, split_circle
 from stats import Stats
 
@@ -12,9 +12,9 @@ DETAILS_MASK = ",".join([
     "id", "displayName", "formattedAddress", "location", "websiteUri", "googleMapsUri",
     "rating", "userRatingCount", "priceLevel", "businessStatus", "regularOpeningHours",
     "restroom", "allowsDogs", "outdoorSeating", "reservable", "servesWine",
-    "generativeSummary", "editorialSummary", "primaryTypeDisplayName",
+    "generativeSummary", "editorialSummary", "primaryTypeDisplayName", "primaryType", "types",
 ])
-SEARCH_MASK = "places.id,places.displayName,places.formattedAddress,places.location"
+SEARCH_MASK = "places.id,places.displayName,places.formattedAddress,places.location,places.primaryType"
 
 PRICE_LEVELS = {
     "PRICE_LEVEL_FREE": 0,
@@ -67,7 +67,8 @@ class Places:
 
     def nearby(self, lat: float, lng: float, radius_m: float) -> list[dict]:
         body = {
-            "includedTypes": ["cafe", "coffee_shop"],
+            # Server-side primary-type filter, so the 20-result cap is spent on actual cafes.
+            "includedPrimaryTypes": list(CAFE_PRIMARY_TYPES),
             "maxResultCount": NEARBY_MAX_RESULTS,
             "locationRestriction": {"circle": {
                 "center": {"latitude": lat, "longitude": lng}, "radius": radius_m,

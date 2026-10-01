@@ -16,6 +16,10 @@ SUMMARY_HAIKU = "haiku"
 
 MENU_ITEMS = ("latte", "americano", "cappuccino", "matcha", "drip")
 
+# Discovery keeps a place only if its Google primaryType is one of these (not merely
+# listed among its types), so restaurants/bars that also tag "cafe" are excluded. Chains are kept.
+CAFE_PRIMARY_TYPES = ("cafe", "coffee_shop")
+
 GRID_RADIUS_M = 250
 NEARBY_MAX_RESULTS = 20  # Places Nearby Search hard cap per call
 

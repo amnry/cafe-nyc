@@ -18,7 +18,8 @@ import anthropic
 import config
 import geo
 import haiku
-from config import SUMMARY_EDITORIAL, SUMMARY_GENERATIVE, SUMMARY_HAIKU
+from classify import lookalike_flags
+from config import CAFE_PRIMARY_TYPES, SUMMARY_EDITORIAL, SUMMARY_GENERATIVE, SUMMARY_HAIKU
 from places import PRICE_LEVELS, Places, discover
 from slug import build_slug, slugify
 from stats import Stats
@@ -100,7 +101,11 @@ def process(place_id: str, places: Places, client, stats: Stats, slugs: dict, ta
         row["slug"] = build_slug(row["name"], row["address"], place_id, taken)
         taken.add(row["slug"])
     slug = row.get("slug") or slugs[place_id]
-    meta = {"slug": slug, "is_new": is_new, "pages": pages, "with_websites": with_websites}
+    meta = {
+        "slug": slug, "is_new": is_new, "pages": pages, "with_websites": with_websites,
+        "primary_type": place.get("primaryType"),
+        "lookalike": lookalike_flags(row["name"], place.get("types")),
+    }
     return row, analysis, meta
 
 
@@ -110,6 +115,9 @@ def report(i: int, n: int, query: str | None, row: dict, a: haiku.Analysis, meta
     if query and not name_matches(query, row["name"]):
         print("  WARNING:  NAME MISMATCH")
     print(f"  area:     {row['neighborhood']}")
+    print(f"  type:     {meta['primary_type']}")
+    if meta["lookalike"]:
+        print(f"  REVIEW:   {', '.join(meta['lookalike'])}")
     print(f"  place id: {row['google_place_id']}")
     print(f"  slug:     {meta['slug']} ({'new' if meta['is_new'] else 'existing, kept'})")
     pl = row["price_level"]
@@ -133,6 +141,7 @@ def main() -> int:
     ap.add_argument("--with-websites", action="store_true",
                     help="fetch cafe websites and extract menu prices (off by default; prices are out of v1)")
     ap.add_argument("--place-ids", help="comma-separated Google place ids; skips Text Search (use when a name is ambiguous)")
+    ap.add_argument("--limit", type=int, help="process at most N targets (discovery: alphabetical by name)")
     g = ap.add_mutually_exclusive_group()
     g.add_argument("--write", action="store_true", help="upsert to Supabase (default is dry-run)")
     g.add_argument("--dry-run", action="store_true", help="explicit dry-run (the default)")
@@ -167,16 +176,27 @@ def main() -> int:
         circles = geo.grid_circles()
         print(f"discovery: {len(circles)} circles of {config.GRID_RADIUS_M} m")
         found = discover(places, circles)
+        outside = wrong_type = 0
+        kept = []
         for pid, p in found.items():
             loc = p.get("location") or {}
-            if geo.neighborhood_for(loc.get("latitude", 0), loc.get("longitude", 0)):
-                targets.append((None, pid))
-        print(f"discovery: {len(found)} unique places, {len(targets)} inside the NTA boundaries")
+            if not geo.neighborhood_for(loc.get("latitude", 0), loc.get("longitude", 0)):
+                outside += 1
+            elif p.get("primaryType") not in CAFE_PRIMARY_TYPES:
+                wrong_type += 1
+            else:
+                kept.append(((p.get("displayName") or {}).get("text", ""), pid))
+        targets = [(None, pid) for _, pid in sorted(kept)]
+        print(f"discovery: {len(found)} unique places; {outside} outside NTAs, {wrong_type} wrong primaryType, "
+              f"{len(targets)} kept")
+    if args.limit is not None:
+        targets = targets[: args.limit]
 
     mode = f"WRITE to {urlparse(env['NEXT_PUBLIC_SUPABASE_URL']).hostname}" if args.write else "DRY RUN (no writes)"
     print(f"\n=== {mode}: {len(targets)} cafe(s) ===")
     run_id = store.start_run() if args.write else None
     processed = 0
+    done: list[tuple[dict, dict]] = []  # (row, meta) for the summary table
     for i, (query, pid) in enumerate(targets, 1):
         try:
             row, analysis, meta = process(pid, places, client, stats, slugs, taken, args.with_websites)
@@ -186,6 +206,7 @@ def main() -> int:
                 store.upsert_prices(cafe_id, analysis.prices)
                 slugs[pid] = meta["slug"]
             processed += 1
+            done.append((row, meta))
         except OutOfScope as e:
             errors.append(f"skipped: {e}")
             print(f"\n[{i}/{len(targets)}] SKIPPED {e}")
@@ -196,7 +217,21 @@ def main() -> int:
     if run_id:
         store.finish_run(run_id, processed, errors)
 
+    if done:
+        print("\n--- summary ---")
+        print(f"{'name':<34} {'address':<26} {'primaryType':<12} {'neighborhood':<18} review")
+        for row, meta in sorted(done, key=lambda d: d[0]["name"]):
+            addr = (row["address"] or "").split(",")[0]
+            print(f"{row['name'][:34]:<34} {addr[:26]:<26} {str(meta['primary_type']):<12} "
+                  f"{row['neighborhood']:<18} {', '.join(meta['lookalike'])}")
+        flagged = sum(1 for _, m in done if m["lookalike"])
+        print(f"flagged for review: {flagged}/{len(done)}")
+
     print("\n--- totals ---")
+    hoods: dict[str, int] = {}
+    for row, _ in done:
+        hoods[row["neighborhood"]] = hoods.get(row["neighborhood"], 0) + 1
+    print("by neighborhood: " + (", ".join(f"{k}={v}" for k, v in sorted(hoods.items())) or "none"))
     print(f"cafes processed: {processed}/{len(targets)}  errors: {len(errors)}")
     print(f"Google calls:    {stats.google_total}  ({', '.join(f'{k}={v}' for k, v in sorted(stats.google.items()))})")
     print(f"Anthropic calls: {stats.anthropic_calls}  (in={stats.input_tokens:,} tok, out={stats.output_tokens:,} tok)")
