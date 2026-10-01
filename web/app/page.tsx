@@ -16,7 +16,9 @@ export default async function Home() {
         <p className="mt-2 text-sm text-muted">Filter, scan, then open it in Google Maps.</p>
       </header>
       <CafeBrowser cafes={cafes} />
-      <footer className={`mt-12 ${MONO_LABEL} text-dim`}>Place data from Google Maps · Times in New York time</footer>
+      <footer className="mt-12 border-t border-line pt-4">
+        <p className={`${MONO_LABEL} text-muted`}>Built in/for NYC</p>
+      </footer>
     </main>
   );
 }
