@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from classify import is_junk_name, lookalike_flags
+from classify import is_address_name, is_junk_name, lookalike_flags
 
 
 def test_plain_cafe_is_clean():
@@ -35,3 +35,12 @@ def test_junk_names():
     assert is_junk_name(None)
     for ok in ["Koké", "Semm", "OCAFE", "12 Matcha", "787 Coffee"]:
         assert not is_junk_name(ok)
+
+
+def test_address_names():
+    assert is_address_name("399 Lafayette", "399 Lafayette St 2nd floor, New York, NY 10003, USA")
+    assert is_address_name("546 Hudson St", "546 Hudson St, New York, NY")
+    assert not is_address_name("787 Coffee", "204 W 10th St, New York, NY")
+    assert not is_address_name("12 Matcha", "54 Bond St, New York, NY")
+    assert not is_address_name("Birch Coffee", "56 7th Ave, New York, NY")
+    assert not is_address_name("399 Lafayette", None)

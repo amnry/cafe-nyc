@@ -28,11 +28,15 @@ export const CAFE_COLUMNS = [
   "is_fresh",
 ] as const satisfies readonly (keyof Cafe)[];
 
-// Revalidate hourly; the ETL only runs biweekly.
+// Revalidate hourly as a fallback; the ETL also triggers /api/revalidate after each write.
 export const REVALIDATE_SECONDS = 3600;
+export const CAFES_TAG = "cafes";
+
+// Default order: best rated first; more reviews breaks ties; unrated cafes last.
+const ORDER = "rating.desc.nullslast,rating_count.desc.nullslast,name.asc";
 
 export function cafesUrl(baseUrl: string): string {
-  const params = new URLSearchParams({ select: CAFE_COLUMNS.join(","), order: "name" });
+  const params = new URLSearchParams({ select: CAFE_COLUMNS.join(","), order: ORDER });
   return `${baseUrl.replace(/\/$/, "")}/rest/v1/cafes_public?${params}`;
 }
 
@@ -49,7 +53,7 @@ export async function getCafes(): Promise<CafesResult> {
   }
   const res = await fetch(cafesUrl(url), {
     headers: { apikey: key },
-    next: { revalidate: REVALIDATE_SECONDS },
+    next: { revalidate: REVALIDATE_SECONDS, tags: [CAFES_TAG] },
   });
   if (!res.ok) {
     throw new Error(`cafes_public fetch failed: HTTP ${res.status}`);

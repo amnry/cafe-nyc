@@ -9,16 +9,18 @@ Website fetching and price extraction are off; enable with --with-websites.
 Dry-run is the default; nothing is written to Supabase without --write.
 """
 import argparse
+import os
 import sys
 from urllib.parse import urlparse
 from datetime import datetime, timezone
 
 import anthropic
+import requests
 
 import config
 import geo
 import haiku
-from classify import is_junk_name, lookalike_flags
+from classify import is_unclear_name, lookalike_flags
 from config import CAFE_PRIMARY_TYPES, SUMMARY_EDITORIAL, SUMMARY_GENERATIVE, SUMMARY_HAIKU
 from places import PRICE_LEVELS, Places, discover
 from slug import build_slug, slugify
@@ -84,8 +86,8 @@ def process(place_id: str, places: Places, client, stats: Stats, slugs: dict, ta
             with_websites: bool = False):
     """Shared pipeline. Returns (row, prices, analysis, meta) for report/upsert."""
     place = places.details(place_id)
-    if is_junk_name((place.get("displayName") or {}).get("text")):
-        raise OutOfScope(f"{place_id} | {place.get('formattedAddress')} has a placeholder name "
+    if is_unclear_name((place.get("displayName") or {}).get("text"), place.get("formattedAddress")):
+        raise OutOfScope(f"{place_id} | {place.get('formattedAddress')} has an unclear name "
                          f"{(place.get('displayName') or {}).get('text')!r}")
     loc = place.get("location") or {}
     neighborhood = geo.neighborhood_for(loc.get("latitude", 0), loc.get("longitude", 0))
@@ -142,6 +144,23 @@ def report(i: int, n: int, query: str | None, row: dict, a: haiku.Analysis, meta
         print(f"  flag:     {f}")
 
 
+def refresh_site(errors: list[str]) -> None:
+    """Ask the site to drop its cached cafe list now instead of waiting out the hourly ISR window."""
+    secret = os.environ.get("REVALIDATE_SECRET")
+    url = os.environ.get("SITE_URL", "https://cafe-nyc.vercel.app").rstrip("/") + "/api/revalidate"
+    if not secret:
+        print("site refresh: skipped (REVALIDATE_SECRET not set); new data shows within an hour")
+        return
+    try:
+        r = requests.post(url, headers={"Authorization": f"Bearer {secret}"}, timeout=30)
+        print(f"site refresh: HTTP {r.status_code}")
+        if not r.ok:
+            errors.append(f"site refresh failed: HTTP {r.status_code}")
+    except requests.RequestException as e:
+        print(f"site refresh: failed ({type(e).__name__})")
+        errors.append(f"site refresh failed: {type(e).__name__}")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--names", help='comma-separated cafe names, e.g. "A,B,C"')
@@ -191,13 +210,13 @@ def main() -> int:
                 outside += 1
             elif p.get("primaryType") not in CAFE_PRIMARY_TYPES:
                 wrong_type += 1
-            elif is_junk_name((p.get("displayName") or {}).get("text")):
+            elif is_unclear_name((p.get("displayName") or {}).get("text"), p.get("formattedAddress")):
                 junk += 1
             else:
                 kept.append(((p.get("displayName") or {}).get("text", ""), pid))
         targets = [(None, pid) for _, pid in sorted(kept)]
         print(f"discovery: {len(found)} unique places; {outside} outside NTAs, {wrong_type} wrong primaryType, "
-              f"{junk} placeholder names, {len(targets)} kept")
+              f"{junk} unclear names, {len(targets)} kept")
     if args.limit is not None:
         targets = targets[: args.limit]
 
@@ -225,6 +244,7 @@ def main() -> int:
             print(f"\n[{i}/{len(targets)}] ERROR {msg}")
     if run_id:
         store.finish_run(run_id, processed, errors)
+        refresh_site(errors)
 
     if done:
         print("\n--- summary ---")

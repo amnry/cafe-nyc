@@ -13,4 +13,10 @@ describe("cafes_public column list", () => {
     expect(url).toMatch(/^https:\/\/x\.supabase\.co\/rest\/v1\/cafes_public\?select=/);
     expect(decodeURIComponent(url)).not.toMatch(/select=\*|laptop|latte_price|\bprices\b/);
   });
+
+  it("orders by rating, then review count, unrated last", () => {
+    expect(decodeURIComponent(cafesUrl("https://x.supabase.co"))).toContain(
+      "order=rating.desc.nullslast,rating_count.desc.nullslast,name.asc",
+    );
+  });
 });

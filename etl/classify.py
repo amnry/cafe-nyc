@@ -28,3 +28,18 @@ def lookalike_flags(name: str, types: list[str] | None) -> list[str]:
 def is_junk_name(name: str | None) -> bool:
     """Names with fewer than 2 letters/digits ('.', '-', '') are placeholder listings, not cafes."""
     return len(re.findall(r"[^\W_]", name or "")) < 2
+
+
+def _words(s: str) -> set[str]:
+    return set(re.findall(r"[^\W_]+", s.lower()))
+
+
+def is_address_name(name: str | None, address: str | None) -> bool:
+    """Name is just the place's own street address ('399 Lafayette' at '399 Lafayette St 2nd floor')."""
+    if not name or not address or not re.match(r"\s*\d", name):
+        return False
+    return _words(name) <= _words(address.split(",")[0])
+
+
+def is_unclear_name(name: str | None, address: str | None) -> bool:
+    return is_junk_name(name) or is_address_name(name, address)
