@@ -1,4 +1,4 @@
-import { sortByBayesian } from "./ranking";
+import { sortByRank } from "./ranking";
 import type { Cafe } from "./types";
 
 // Explicit column list: never select("*"). cafes_public also exposes `laptop`,
@@ -35,7 +35,7 @@ export const REVALIDATE_SECONDS = 3600;
 export const CAFES_TAG = "cafes";
 
 // Stable base order from the database; the default order is applied in getCafes
-// (Bayesian average rating, which needs the mean across all cafes).
+// (Bayesian rating + completeness bonus, which needs the mean across all cafes).
 const ORDER = "rating.desc.nullslast,rating_count.desc.nullslast,name.asc";
 
 export function cafesUrl(baseUrl: string): string {
@@ -61,7 +61,7 @@ export async function getCafes(): Promise<CafesResult> {
   if (!res.ok) {
     throw new Error(`cafes_public fetch failed: HTTP ${res.status}`);
   }
-  const cafes = sortByBayesian((await res.json()) as Cafe[]);
+  const cafes = sortByRank((await res.json()) as Cafe[]);
   const date = Date.parse(res.headers.get("date") ?? "");
   return { cafes, fetchedAt: Number.isNaN(date) ? Date.now() : date };
 }

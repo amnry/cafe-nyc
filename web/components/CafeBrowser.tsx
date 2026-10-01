@@ -7,14 +7,17 @@ import { useFavorites } from "@/lib/favorites";
 import { applyFilters, DEFAULT_FILTERS, type Filters } from "@/lib/filters";
 import { getOpenStatus } from "@/lib/hours";
 import { pickSurprise } from "@/lib/live";
+import { createSearcher, searchCafes } from "@/lib/search";
 import type { Cafe } from "@/lib/types";
 import { useGeolocation } from "@/lib/useGeolocation";
 import { useNow } from "@/lib/useNow";
+import { useSearchQuery } from "@/lib/useSearchQuery";
 import { useView } from "@/lib/useView";
 import { MONO_LABEL } from "./bits";
 import { CafeCard } from "./CafeCard";
 import { DetailDrawer } from "./DetailDrawer";
 import { FilterBar } from "./FilterBar";
+import { SearchBar } from "./SearchBar";
 
 // The map component (and through it the Google Maps JS API) loads on first open only.
 const CafeMap = dynamic(() => import("./CafeMap"), {
@@ -32,10 +35,16 @@ export function CafeBrowser({ cafes, renderedAt, mapsKey }: { cafes: Cafe[]; ren
   const now = useNow(renderedAt);
   const { ids: favorites, toggle } = useFavorites();
   const [view, setView] = useView();
+  const [query, setQuery] = useSearchQuery();
   const geo = useGeolocation();
 
   const neighborhoods = useMemo(() => [...new Set(cafes.map((c) => c.neighborhood))].sort(), [cafes]);
-  const visible = useMemo(() => applyFilters(cafes, filters, now), [cafes, filters, now]);
+  const searcher = useMemo(() => createSearcher(cafes), [cafes]);
+  // Search and filters combine: a cafe must match both.
+  const visible = useMemo(
+    () => searchCafes(applyFilters(cafes, filters, now), searcher, query),
+    [cafes, filters, now, searcher, query],
+  );
   // Server order is by rating; near-me reorders by distance in the browser only.
   const ordered = useMemo(
     () => (geo.origin ? sortByDistance(visible, geo.origin) : visible.map((cafe) => ({ cafe, meters: null }))),
@@ -48,6 +57,7 @@ export function CafeBrowser({ cafes, renderedAt, mapsKey }: { cafes: Cafe[]; ren
 
   return (
     <div className="flex flex-col gap-5">
+      <SearchBar value={query} onCommit={setQuery} />
       <FilterBar
         filters={filters}
         onChange={setFilters}
@@ -66,7 +76,25 @@ export function CafeBrowser({ cafes, renderedAt, mapsKey }: { cafes: Cafe[]; ren
         </p>
       )}
 
-      {view === "map" ? (
+      {visible.length === 0 ? (
+        <p className={`border border-dashed border-line p-10 text-center ${MONO_LABEL} text-muted`}>
+          {query.trim() ? (
+            <>
+              No cafes match{" "}
+              <button type="button" className="text-accent underline underline-offset-4" onClick={() => setQuery("")}>
+                Clear search
+              </button>
+            </>
+          ) : (
+            <>
+              Nothing here. Even the barista is confused.{" "}
+              <button type="button" className="text-accent underline underline-offset-4" onClick={() => setFilters(DEFAULT_FILTERS)}>
+                Clear filters
+              </button>
+            </>
+          )}
+        </p>
+      ) : view === "map" ? (
         mapsKey ? (
           <CafeMap apiKey={mapsKey} cafes={visible} openIds={openIds} origin={geo.origin} onSelect={setSelected} />
         ) : (
@@ -74,13 +102,6 @@ export function CafeBrowser({ cafes, renderedAt, mapsKey }: { cafes: Cafe[]; ren
             Map unavailable: NEXT_GOOGLE_MAPS_API_KEY is not set.
           </p>
         )
-      ) : visible.length === 0 ? (
-        <p className={`border border-dashed border-line p-10 text-center ${MONO_LABEL} text-muted`}>
-          Nothing here. Even the barista is confused.{" "}
-          <button type="button" className="text-accent underline underline-offset-4" onClick={() => setFilters(DEFAULT_FILTERS)}>
-            Clear filters
-          </button>
-        </p>
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
           {ordered.map(({ cafe, meters }) => (

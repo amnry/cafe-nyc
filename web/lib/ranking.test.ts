@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bayesianScore, meanRating, sortByBayesian } from "./ranking";
+import { bayesianScore, COMPLETENESS_WEIGHT, completeness, meanRating, rankScore, sortByRank } from "./ranking";
 import type { Cafe } from "./types";
 
 const base: Cafe = {
@@ -29,13 +29,50 @@ describe("bayesianScore", () => {
   });
 });
 
-describe("sortByBayesian", () => {
+describe("sortByRank", () => {
   it("ranks a well-reviewed 4.9 above a 5.0 with a handful of reviews", () => {
     const list = [cafe("tiny5", 5, 2), cafe("big49", 4.9, 4894), cafe("mid42", 4.2, 2133), cafe("unrated", null, null)];
-    expect(sortByBayesian(list).map((c) => c.id)).toEqual(["big49", "tiny5", "unrated", "mid42"]);
+    expect(sortByRank(list).map((c) => c.id)).toEqual(["big49", "tiny5", "unrated", "mid42"]);
   });
   it("breaks score ties by review count, then name", () => {
     const list = [cafe("b", null, null), cafe("a", null, null)];
-    expect(sortByBayesian(list).map((c) => c.id)).toEqual(["a", "b"]);
+    expect(sortByRank(list).map((c) => c.id)).toEqual(["a", "b"]);
+  });
+});
+
+describe("completeness", () => {
+  const full: Partial<Cafe> = { restroom: true, allows_dogs: false, outdoor_seating: true, ai_summary: "g", ai_summary_source: "generative" };
+  it("counts non-null attributes (false counts) and a shown Google summary, out of 4", () => {
+    expect(completeness(cafe("a", 4, 10))).toBe(0);
+    expect(completeness({ ...cafe("a", 4, 10), ...full })).toBe(1);
+    expect(completeness({ ...cafe("a", 4, 10), restroom: false, allows_dogs: null, outdoor_seating: true })).toBe(0.5);
+  });
+  it("does not count a hidden Haiku summary or a missing one", () => {
+    expect(completeness({ ...cafe("a", 4, 10), ai_summary: "h", ai_summary_source: "haiku" })).toBe(0);
+    expect(completeness({ ...cafe("a", 4, 10), ai_summary: null, ai_summary_source: "generative" })).toBe(0);
+    expect(completeness({ ...cafe("a", 4, 10), ai_summary: "e", ai_summary_source: "editorial" })).toBe(0.25);
+  });
+});
+
+describe("rankScore", () => {
+  it("is Bayesian + weight * completeness", () => {
+    const c = { ...cafe("a", 5, 50), restroom: true, allows_dogs: true };
+    expect(rankScore(c, 4)).toBeCloseTo(4.5 + COMPLETENESS_WEIGHT * 0.5, 10);
+  });
+});
+
+describe("sortByRank completeness bonus", () => {
+  it("a 3.5 chain with full data still ranks below a 4.7 cafe with no data", () => {
+    const chain = {
+      ...cafe("chain", 3.5, 1200), restroom: true, allows_dogs: true, outdoor_seating: true,
+      ai_summary: "g", ai_summary_source: "generative" as const,
+    };
+    const bare = cafe("bare", 4.7, 300);
+    expect(sortByRank([chain, bare]).map((c) => c.id)).toEqual(["bare", "chain"]);
+  });
+  it("breaks a near-tie in favor of the cafe with more data", () => {
+    const a = cafe("a", 4.5, 400);
+    const b = { ...cafe("b", 4.5, 400), restroom: true, allows_dogs: false };
+    expect(sortByRank([a, b]).map((c) => c.id)).toEqual(["b", "a"]);
   });
 });

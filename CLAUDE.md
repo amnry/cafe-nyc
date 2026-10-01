@@ -13,6 +13,7 @@ Users filter cafes here, then click through to Google Maps. That's the whole pro
 - Card: name, rating, $ level, restroom + dogs + outdoor icons, open now + closing time, Google Maps button.
 - Detail drawer: AI summary, outdoor seating, wine, reservable, website. Food is out of scope. Only ai_summary_source = 'generative' gets the footnote "The description above: Summarized with Gemini" (drawer only, below the Maps button; never on the card). Rows with is_fresh = false stay visible with a small "may be outdated" note.
 - Filters: restroom, dogs, open now, price level.
+- Search bar above the filters: client-side Fuse.js over name, street_address, neighborhood; debounced, in the URL as ?q=, combines with filters, same in grid and map.
 - Laptop data is not shown anywhere in v1. The laptop* DB columns stay (no migration) but the ETL does not fill them and the site must not read them.
 - Prices are not shown or read anywhere in v1. The menu_prices table and cafes_public.prices / latte_price_cents stay (no migration); the ETL's website fetch + price extraction is behind `--with-websites`, off by default. The web app must not read prices, latte_price_cents, or laptop.
 - Summaries: only Google's (generative/editorial) are shown. Haiku fallbacks are generated from reviews only (never restating restroom/dogs/outdoor/wine, null if unsupported) but hidden on the site.
@@ -20,7 +21,7 @@ Users filter cafes here, then click through to Google Maps. That's the whole pro
 - Address line on the site = cafes.street_address (street number + route from addressComponents).
 - Neighborhood = whichever NTA polygon (West Village or Greenwich Village) contains the cafe; boundaries in /etl/data. Cafes outside both are skipped.
 - Grid view default; map (Google Maps JS) lazy-loaded only when user opens it. View lives in the URL (?view=map). Base map is visually muted; pins carry the color. Key: NEXT_GOOGLE_MAPS_API_KEY (passed from the server; must be HTTP-referrer restricted).
-- Default order: Bayesian average rating, (v/(v+m))*R + (m/(v+m))*C with m=50, C=mean rating, v=review count. "Near me" sorts by distance with "N min walk" (~80 m/min); on by default only if geolocation permission was already granted. Location stays in browser memory: never sent, logged, or stored.
+- Default order: Bayesian average rating, (v/(v+m))*R + (m/(v+m))*C with m=50, C=mean rating, v=review count, plus COMPLETENESS_WEIGHT (0.3) * completeness, where completeness = (non-null restroom, dogs, outdoor + 1 if a Google summary is shown) / 4. "Near me" sorts by distance with "N min walk" (~80 m/min); on by default only if geolocation permission was already granted. Location stays in browser memory: never sent, logged, or stored.
 - All times computed in America/New_York.
 - Never store raw Google review text. The ETL does not even fetch reviews; store only derived labels.
 - ETL runs biweekly; Google data must not be older than 30 days.
