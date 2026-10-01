@@ -35,7 +35,7 @@ TEST_CAFE_LNG=...
 ## 3. Seed the test cafe
 ```bash
 cd web
-npm run seed:test-cafe               # inserts "Test Cafe (local)" and prints its cafe_id
+npm run seed:test-cafe               # inserts "My Test Cafe" and prints its cafe_id
 npm run seed:test-cafe -- --remove   # deletes it (its speed tests cascade)
 ```
 The script refuses to run unless the Supabase URL is `localhost` / `127.0.0.1`. It takes the URL and key

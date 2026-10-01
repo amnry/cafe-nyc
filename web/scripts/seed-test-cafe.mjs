@@ -1,4 +1,4 @@
-// Inserts (or with --remove, deletes) one cafe, "Test Cafe (local)", in the LOCAL Supabase so the
+// Inserts (or with --remove, deletes) one cafe, "My Test Cafe", in the LOCAL Supabase so the
 // speed test can be tried without a real cafe. The coordinates come from TEST_CAFE_LAT and
 // TEST_CAFE_LNG in web/.env.local (gitignored): no address is committed.
 //
@@ -50,7 +50,7 @@ if (remove) {
   const row = {
     google_place_id: PLACE_ID,
     slug: "test-cafe-local",
-    name: "Test Cafe (local)",
+    name: "My Test Cafe",
     neighborhood: "West Village",
     lat,
     lng,

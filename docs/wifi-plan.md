@@ -46,7 +46,7 @@ Config lives in `web/lib/speedtest/client-config.ts` (Phase 3). Option names che
 - Dev: log actual duration (`getTotalDurationMs()`) to the console when `NODE_ENV=development`. If a normal connection runs over ~18 s, tune the sequence (count first, then drop the 25 MB download).
 
 ## Local development (no real cafe address in git)
-- `web/scripts/seed-test-cafe.mjs` (npm script `seed:test-cafe`): inserts one cafe, "Test Cafe (local)", `google_place_id = 'local-test-cafe'`, at `TEST_CAFE_LAT` / `TEST_CAFE_LNG` from `web/.env.local` (gitignored). `--remove` deletes it (speed tests cascade). It refuses to run unless the Supabase URL is `localhost` / `127.0.0.1` (URL and service-role key come from `supabase status`, never from the production values in `.env.local`).
+- `web/scripts/seed-test-cafe.mjs` (npm script `seed:test-cafe`): inserts one cafe, "My Test Cafe", `google_place_id = 'local-test-cafe'`, at `TEST_CAFE_LAT` / `TEST_CAFE_LNG` from `web/.env.local` (gitignored). `--remove` deletes it (speed tests cascade). It refuses to run unless the Supabase URL is `localhost` / `127.0.0.1` (URL and service-role key come from `supabase status`, never from the production values in `.env.local`).
 - `clientIp()` also reads `cf-connecting-ip`, only when `NODE_ENV=development`, so a Cloudflare tunnel (`cloudflared tunnel --url localhost:3000`) gives a real client IP for phone testing. In production that header is ignored.
 - Turnstile test keys locally. Steps are documented in `docs/wifi-local-dev.md`.
 
