@@ -40,7 +40,7 @@ function getPosition(): Promise<GeolocationPosition> {
 
 type Engine = InstanceType<typeof import("@cloudflare/speedtest").default>;
 
-export function WifiTest({ cafeId }: { cafeId: string }) {
+export function WifiTest({ cafeId, untested }: { cafeId: string; untested: boolean }) {
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const alive = useRef(true);
@@ -133,7 +133,7 @@ export function WifiTest({ cafeId }: { cafeId: string }) {
       <div className="mt-2" aria-live="polite">
         {phase.kind === "idle" && (
           <button type="button" onClick={run} className={OUTLINE_BUTTON}>
-            Test this cafe&apos;s WiFi
+            {untested ? "Be the first to test this cafe's WiFi" : "Test this cafe's WiFi"}
           </button>
         )}
         {phase.kind === "locating" && <p className="text-sm">Checking your location… allow it if your browser asks.</p>}

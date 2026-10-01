@@ -6,6 +6,7 @@ import { safeWebsite, summaryAttribution, visibleSummary } from "@/lib/drawer";
 import { streetLine } from "@/lib/format";
 import type { OpenStatus } from "@/lib/hours";
 import type { Cafe, TriState } from "@/lib/types";
+import { wifiSummary } from "@/lib/wifi";
 import { MapsLink, MONO_LABEL, PriceLevel, Rating, StaleNote, StatusText, TriValue } from "./bits";
 import { WifiTest } from "./WifiTest";
 
@@ -32,6 +33,7 @@ export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: Op
   const attribution = summaryAttribution(cafe.ai_summary_source);
   const site = safeWebsite(cafe.website);
   const address = streetLine(cafe.street_address, cafe.address);
+  const wifi = wifiSummary(cafe);
 
   return (
     <dialog
@@ -87,6 +89,16 @@ export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: Op
           <Fact label="Outdoor">{tri(cafe.outdoor_seating)}</Fact>
           <Fact label="Wine">{tri(cafe.serves_wine)}</Fact>
           <Fact label="Reservable">{tri(cafe.reservable)}</Fact>
+          <Fact label="WiFi">
+            {wifi ? (
+              <span className="text-right text-[13px] tabular-nums">
+                {wifi}
+                {cafe.wifi_latency_ms !== null && <> · {Math.round(cafe.wifi_latency_ms)} ms</>}
+              </span>
+            ) : (
+              <span className="text-[13px] text-dim">Untested</span>
+            )}
+          </Fact>
           {site && (
             <Fact label="Website">
               <a
@@ -102,7 +114,7 @@ export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: Op
           )}
         </dl>
 
-        <WifiTest cafeId={cafe.id} />
+        <WifiTest cafeId={cafe.id} untested={wifi === null} />
 
         <div className="mt-auto pt-6">
           <MapsLink cafe={cafe} />

@@ -3,6 +3,7 @@ import { visibleSummary } from "@/lib/drawer";
 import { streetLine } from "@/lib/format";
 import type { OpenStatus } from "@/lib/hours";
 import type { Cafe } from "@/lib/types";
+import { wifiSummary } from "@/lib/wifi";
 import { AttrIcon } from "./AttrIcon";
 import { MapsLink, MONO_LABEL, OUTLINE_BUTTON, PriceLevel, Rating, StaleNote, StatusText } from "./bits";
 
@@ -25,6 +26,7 @@ export function CafeCard({ cafe, status, walk, favorite, onToggleFavorite, onSel
 }) {
   const address = streetLine(cafe.street_address, cafe.address);
   const summary = visibleSummary(cafe);
+  const wifi = wifiSummary(cafe);
   return (
     <article
       className="cafe-card relative flex flex-col gap-2 bg-surface p-3"
@@ -78,6 +80,14 @@ export function CafeCard({ cafe, status, walk, favorite, onToggleFavorite, onSel
             <StatusText status={status} />
             {walk && <span className="bg-accent px-1 font-mono text-[11px] text-accent-ink">{walk}</span>}
           </span>
+        </Row>
+        {/* Tested: speeds and days. Untested: a quiet note, no call to action (that lives in the drawer). */}
+        <Row label="WiFi">
+          {wifi ? (
+            <span className="text-[13px] tabular-nums">{wifi}</span>
+          ) : (
+            <span className={`${MONO_LABEL} text-dim`}>untested</span>
+          )}
         </Row>
       </dl>
 

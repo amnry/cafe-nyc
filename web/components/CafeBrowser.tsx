@@ -13,6 +13,7 @@ import { useGeolocation } from "@/lib/useGeolocation";
 import { useNow } from "@/lib/useNow";
 import { useSearchQuery } from "@/lib/useSearchQuery";
 import { useView } from "@/lib/useView";
+import { cafeAtLocation } from "@/lib/wifi";
 import { MONO_LABEL } from "./bits";
 import { CafeCard } from "./CafeCard";
 import { DetailDrawer } from "./DetailDrawer";
@@ -55,6 +56,9 @@ export function CafeBrowser({ cafes, renderedAt, mapsKey }: { cafes: Cafe[]; ren
     [visible, now],
   );
 
+  // Near me on and within 75 m of a cafe: offer the WiFi test. Computed here from the in-memory position.
+  const here = useMemo(() => (geo.origin ? cafeAtLocation(cafes, geo.origin) : null), [cafes, geo.origin]);
+
   const meters = new Map(ordered.map((o) => [o.cafe.id, o.meters]));
   // Same card in the grid and on map-pin hover.
   const card = (cafe: Cafe) => {
@@ -91,6 +95,19 @@ export function CafeBrowser({ cafes, renderedAt, mapsKey }: { cafes: Cafe[]; ren
         <p role="status" className={`-mt-3 ${MONO_LABEL} text-muted`}>
           {geo.notice}
         </p>
+      )}
+
+      {here && (
+        <div role="status" className="-mt-2 flex flex-wrap items-center justify-between gap-2 border border-foreground bg-accent px-3 py-2 text-sm text-accent-ink">
+          <p>Looks like you&apos;re at {here.name}. Test the WiFi?</p>
+          <button
+            type="button"
+            onClick={() => setSelected(here)}
+            className={`${MONO_LABEL} border border-accent-ink px-2 py-1 hover:bg-accent-ink hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink`}
+          >
+            Test the WiFi
+          </button>
+        </div>
       )}
 
       {visible.length === 0 ? (

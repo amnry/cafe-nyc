@@ -14,7 +14,7 @@ select lives_ok(
   $$insert into speed_tests (cafe_id, ip_prefix_hash, asn, status, nonce, down_mbps)
     values ('00000000-0000-0000-0000-0000000000c1', 'h', 7018, 'accepted', 'n-1', 80)$$,
   'service_role can insert speed_tests');
-select is((select count(*)::int from speed_tests), 1, 'service_role can read speed_tests');
+select is((select count(*)::int from speed_tests where cafe_id = '00000000-0000-0000-0000-0000000000c1'), 1, 'service_role can read speed_tests');
 
 -- constraints
 select throws_ok(

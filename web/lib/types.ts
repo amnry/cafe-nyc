@@ -38,4 +38,10 @@ export interface Cafe {
   ai_summary_source: AiSummarySource | null;
   google_refreshed_at: string | null;
   is_fresh: boolean | null;
+  // 90-day medians of verified speed tests (cafes_public); null until a cafe has been tested.
+  wifi_down_mbps: number | null;
+  wifi_up_mbps: number | null;
+  wifi_latency_ms: number | null;
+  wifi_sample_days: number; // distinct days with an accepted test; 0 = untested
+  wifi_last_tested_at: string | null;
 }

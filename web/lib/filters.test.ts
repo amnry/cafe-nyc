@@ -7,6 +7,7 @@ const base: Cafe = {
   google_maps_uri: null, price_level: 2, business_status: "OPERATIONAL", opening_hours: null,
   restroom: true, allows_dogs: false, outdoor_seating: null, reservable: null, serves_wine: null,
   ai_summary: null, ai_summary_source: null, google_refreshed_at: null, is_fresh: true,
+  wifi_down_mbps: null, wifi_up_mbps: null, wifi_latency_ms: null, wifi_sample_days: 0, wifi_last_tested_at: null,
 };
 const cafe = (o: Partial<Cafe>): Cafe => ({ ...base, ...o });
 
