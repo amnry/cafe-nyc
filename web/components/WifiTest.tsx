@@ -40,8 +40,7 @@ function getPosition(): Promise<GeolocationPosition> {
 
 type Engine = InstanceType<typeof import("@cloudflare/speedtest").default>;
 
-export function WifiTest({ cafeId, untested }: { cafeId: string; untested: boolean }) {
-  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+export function WifiTest({ cafeId, untested, siteKey }: { cafeId: string; untested: boolean; siteKey: string | null }) {
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const alive = useRef(true);
   const engine = useRef<Engine | null>(null);

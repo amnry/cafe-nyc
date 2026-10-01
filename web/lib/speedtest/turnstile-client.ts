@@ -1,4 +1,5 @@
 // Cloudflare Turnstile in the browser. The script loads only when the visitor taps Test.
+import { TURNSTILE_ACTION } from "./client";
 
 interface TurnstileApi {
   render(el: HTMLElement, opts: Record<string, unknown>): string;
@@ -42,6 +43,7 @@ export async function getTurnstileToken(container: HTMLElement, siteKey: string,
     const timer = setTimeout(() => done(() => reject(new Error("turnstile timeout"))), timeoutMs);
     id = api.render(container, {
       sitekey: siteKey,
+      action: TURNSTILE_ACTION,
       appearance: "interaction-only",
       theme: "light",
       callback: (token: string) => done(() => resolve(token)),

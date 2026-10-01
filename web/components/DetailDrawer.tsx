@@ -21,7 +21,12 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 
 const tri = (v: TriState) => <TriValue value={v} />;
 
-export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: OpenStatus | null; onClose: () => void }) {
+export function DetailDrawer({ cafe, status, turnstileSiteKey, onClose }: {
+  cafe: Cafe;
+  status: OpenStatus | null;
+  turnstileSiteKey: string | null;
+  onClose: () => void;
+}) {
   const ref = useRef<HTMLDialogElement>(null);
   const [openedAt] = useState(() => Date.now()); // for "Last tested X ago"
 
@@ -120,7 +125,7 @@ export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: Op
           )}
         </dl>
 
-        <WifiTest cafeId={cafe.id} untested={wifi === null} />
+        <WifiTest cafeId={cafe.id} untested={wifi === null} siteKey={turnstileSiteKey} />
 
         <div className="mt-auto pt-6">
           <MapsLink cafe={cafe} />

@@ -50,6 +50,21 @@ describe("POST /start", () => {
       expect(await reasonOf(res)).toBe("turnstile_failed");
       expect(deps.db.starts).toHaveLength(0);
     });
+    it("a token for another hostname or action is rejected (outside development)", async () => {
+      const wrongHost = makeDeps({ fetch: fakeFetch({ turnstileHostname: "evil.example" }) });
+      expect(await reasonOf(await run(wrongHost))).toBe("turnstile_failed");
+      const wrongAction = makeDeps({ fetch: fakeFetch({ turnstileAction: "login" }) });
+      expect(await reasonOf(await run(wrongAction))).toBe("turnstile_failed");
+    });
+    it("checks the hostname against the one calling us, from x-forwarded-host", async () => {
+      const deps = makeDeps({ fetch: fakeFetch({ turnstileHostname: "3rdplacenyc.com" }) });
+      const res = await run(deps, startBody(), { "x-real-ip": "203.0.113.7", "x-forwarded-host": "3rdplacenyc.com" });
+      expect(res.status).toBe(200);
+    });
+    it("skips the action and hostname check in development (test keys)", async () => {
+      const deps = makeDeps({ dev: true, fetch: fakeFetch({ turnstileHostname: "example.com", turnstileAction: "" }) });
+      expect((await run(deps)).status).toBe(200);
+    });
     it("Private Relay comes before the geofence and ASN", async () => {
       const deps = makeDeps();
       const res = await run(deps, startBody({ lat: CAFE.lat + 0.05 }), { "x-real-ip": "172.224.226.5" });

@@ -1,6 +1,7 @@
 import "server-only";
 import { distanceMeters } from "@/lib/distance";
 import { classifyAsn } from "./asn";
+import { TURNSTILE_ACTION } from "./client";
 import type { Deps } from "./deps";
 import { checkGeofence } from "./geofence";
 import { lookupAsn } from "./ipinfo";
@@ -14,6 +15,11 @@ export const MAX_STARTS_PER_CAFE_PREFIX_PER_HOUR = 10;
 export const MAX_STARTS_PER_DEVICE_PER_DAY = 10;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function requestHostname(request: Request): string {
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? new URL(request.url).host;
+  return host.split(",")[0].trim().replace(/:\d+$/, "");
+}
 
 interface StartInput {
   cafe_id: string;
@@ -50,7 +56,9 @@ export async function handleStart(request: Request, deps: Deps): Promise<Respons
   const prefix = ip ? ipPrefix(ip) : null;
   if (!ip || !prefix) return rejection("no_client_ip");
 
-  if (!(await verifyTurnstile(input.turnstile_token, ip, deps.env.turnstileSecret, deps.fetch))) {
+  // Outside development the token must be for our action and the hostname calling us.
+  const expect = deps.dev ? null : { action: TURNSTILE_ACTION, hostname: requestHostname(request) };
+  if (!(await verifyTurnstile(input.turnstile_token, ip, deps.env.turnstileSecret, deps.fetch, expect))) {
     return rejection("turnstile_failed"); // not stored: a bot could otherwise fill the table
   }
 

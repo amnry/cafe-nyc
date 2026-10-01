@@ -75,7 +75,7 @@ wifi_latency_ms, wifi_sample_days, wifi_last_tested_at.
 ## Env vars (server only, never NEXT_PUBLIC)
 SUPABASE_SERVICE_ROLE_KEY, TURNSTILE_SECRET_KEY, IPINFO_TOKEN,
 SPEEDTEST_TOKEN_SECRET, IP_HASH_SALT.
-Public: NEXT_PUBLIC_TURNSTILE_SITE_KEY.
+Site key (read on the server, passed to the page as a prop): NEXT_TURNSTILE_SITE_KEY.
 
 ## Tests
 Unit: geofence math, ASN classification, token sign/verify/expiry,

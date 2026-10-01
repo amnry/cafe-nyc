@@ -26,6 +26,22 @@ describe("verifyTurnstile", () => {
     expect(await verifyTurnstile("t", "1.2.3.4", "s", no)).toBe(false);
     expect(await verifyTurnstile("t", "1.2.3.4", "s", err)).toBe(false);
   });
+
+  describe("action and hostname", () => {
+    const reply = (body: unknown) => (async () => json(body)) as unknown as typeof fetch;
+    const want = { action: "speedtest", hostname: "3rdplacenyc.com" };
+    it("passes when both match (hostname case-insensitive)", async () => {
+      expect(await verifyTurnstile("t", "ip", "s", reply({ success: true, action: "speedtest", hostname: "3rdPlaceNYC.com" }), want)).toBe(true);
+    });
+    it("fails for another action, another hostname, or a missing field", async () => {
+      expect(await verifyTurnstile("t", "ip", "s", reply({ success: true, action: "login", hostname: "3rdplacenyc.com" }), want)).toBe(false);
+      expect(await verifyTurnstile("t", "ip", "s", reply({ success: true, action: "speedtest", hostname: "evil.example" }), want)).toBe(false);
+      expect(await verifyTurnstile("t", "ip", "s", reply({ success: true }), want)).toBe(false);
+    });
+    it("is not checked when no expectation is passed (local test keys)", async () => {
+      expect(await verifyTurnstile("t", "ip", "s", reply({ success: true, hostname: "example.com" }), null)).toBe(true);
+    });
+  });
 });
 
 describe("createDb", () => {

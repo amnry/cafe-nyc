@@ -30,7 +30,12 @@ const CafeMap = dynamic(() => import("./CafeMap"), {
   ),
 });
 
-export function CafeBrowser({ cafes, renderedAt, mapsKey }: { cafes: Cafe[]; renderedAt: number; mapsKey: string | null }) {
+export function CafeBrowser({ cafes, renderedAt, mapsKey, turnstileSiteKey }: {
+  cafes: Cafe[];
+  renderedAt: number;
+  mapsKey: string | null;
+  turnstileSiteKey: string | null;
+}) {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [selected, setSelected] = useState<Cafe | null>(null);
   const now = useNow(renderedAt);
@@ -152,6 +157,7 @@ export function CafeBrowser({ cafes, renderedAt, mapsKey }: { cafes: Cafe[]; ren
         <DetailDrawer
           key={selected.id}
           cafe={selected}
+          turnstileSiteKey={turnstileSiteKey}
           status={now ? getOpenStatus(selected.opening_hours, now) : null}
           onClose={() => setSelected(null)}
         />

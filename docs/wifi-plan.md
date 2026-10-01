@@ -147,7 +147,7 @@ grant execute on function speedtest_known_asn(uuid) to service_role;
 - `CafeBrowser.tsx`: near-me banner when `geo.origin` is within 75 m of a cafe: "Looks like you're at X. Test the WiFi?" Distance computed client-side; nothing is sent until the user taps Test.
 
 ## Phase 5: deploy
-`supabase db push`; Vercel env (Production + Preview): `SUPABASE_SERVICE_ROLE_KEY`, `TURNSTILE_SECRET_KEY`, `IPINFO_TOKEN`, `SPEEDTEST_TOKEN_SECRET`, `IP_HASH_SALT`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`; Turnstile hostnames 3rdplacenyc.com, cafe-nyc.vercel.app, localhost. Field tests: cafe WiFi = accepted; cellular = `mobile_network`; 500 m away = `too_far`.
+`supabase db push`; Vercel env (Production + Preview): `SUPABASE_SERVICE_ROLE_KEY`, `TURNSTILE_SECRET_KEY`, `IPINFO_TOKEN`, `SPEEDTEST_TOKEN_SECRET`, `IP_HASH_SALT`, `NEXT_TURNSTILE_SITE_KEY` (not `NEXT_PUBLIC_`: Vercel refused that name, so `page.tsx` reads it on the server and passes it down as a prop, like `NEXT_GOOGLE_MAPS_API_KEY`); Turnstile hostnames 3rdplacenyc.com, cafe-nyc.vercel.app and the preview hostname. Outside development, siteverify must also return action `speedtest` and the hostname that is calling us. Field tests: cafe WiFi = accepted; cellular = `mobile_network`; 500 m away = `too_far`.
 
 ## Verification
 - Each phase: `npm test`, `npm run lint`, `npm run build` in `web/`.

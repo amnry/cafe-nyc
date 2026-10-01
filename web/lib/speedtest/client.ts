@@ -1,6 +1,9 @@
 import type { Results } from "./bounds";
 import { REJECT_REASONS, type RejectReason } from "./reasons";
 
+/** Turnstile action: set when the widget renders, checked again by siteverify on the server. */
+export const TURNSTILE_ACTION = "speedtest";
+
 export const EXPECTED_DURATION_MS = 15_000;
 /** Give up if the engine has not finished by now (the server rejects anything past 120 s anyway). */
 export const RUN_TIMEOUT_MS = 60_000;

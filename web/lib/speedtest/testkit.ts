@@ -41,15 +41,17 @@ export class FakeDb implements Db {
 
 export interface Net {
   turnstile: boolean;
+  turnstileHostname: string;
+  turnstileAction: string;
   asn: Record<string, { asn: string; as_name: string } | null>; // by IP; "*" is the default
 }
 
 /** Fake fetch for Turnstile siteverify and the ipinfo lite API. */
 export function fakeFetch(net: Partial<Net> = {}): typeof fetch {
-  const cfg: Net = { turnstile: true, asn: { "*": { asn: "AS7018", as_name: "AT&T Internet" } }, ...net };
+  const cfg: Net = { turnstile: true, turnstileHostname: "localhost", turnstileAction: "speedtest", asn: { "*": { asn: "AS7018", as_name: "AT&T Internet" } }, ...net };
   return (async (input: RequestInfo | URL) => {
     const url = String(input);
-    if (url.includes("challenges.cloudflare.com")) return Response.json({ success: cfg.turnstile });
+    if (url.includes("challenges.cloudflare.com")) return Response.json({ success: cfg.turnstile, action: cfg.turnstileAction, hostname: cfg.turnstileHostname });
     const m = url.match(/api\.ipinfo\.io\/lite\/([^?]+)/);
     if (m) {
       const hit = cfg.asn[decodeURIComponent(m[1])] ?? cfg.asn["*"];
