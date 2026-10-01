@@ -10,7 +10,7 @@ Users filter cafes here, then click through to Google Maps. That's the whole pro
 
 ## Decisions (do not change without asking)
 - Card icons: restroom / dogs / outdoor seating (Lucide Toilet / Dog / Trees), each tri-state yes | no | unknown. yes = ink with amber glow, no = dimmed + slash, unknown = not rendered (never shown as no). Filter chips for restroom and dogs reuse the icons.
-- Card: name, rating, $ level, restroom + dogs + outdoor icons, open now + closing time, Google Maps button.
+- Card: name, rating, $ level, restroom + dogs + outdoor icons, open now + closing time, WiFi line, Google Maps button. WiFi line: tested = "↓ 85 ↑ 20 Mbps · 4 days" ("early data" when under 3 days); untested = small muted "WiFi untested", no call to action on the card. WiFi never affects ranking or completeness.
 - Detail drawer: AI summary, outdoor seating, wine, reservable, website. Food is out of scope. Only ai_summary_source = 'generative' gets the footnote "The description above: Summarized with Gemini" (drawer only, below the Maps button; never on the card). Rows with is_fresh = false stay visible with a small "may be outdated" note.
 - Filters: restroom, dogs, open now, price level.
 - Search bar above the filters: client-side Fuse.js over name, street_address, neighborhood; debounced, in the URL as ?q=, combines with filters, same in grid and map.
@@ -21,11 +21,12 @@ Users filter cafes here, then click through to Google Maps. That's the whole pro
 - Address line on the site = cafes.street_address (street number + route from addressComponents).
 - Neighborhood = whichever NTA polygon (West Village or Greenwich Village) contains the cafe; boundaries in /etl/data. Cafes outside both are skipped.
 - Theme: one look on every device (no prefers-color-scheme), from the share image: amber #ffb224 page, receipt-paper cards (#fbfaf6), ink #1a1203; amber is a fill, never text on paper. Grid view default; map (Google Maps JS) lazy-loaded only when user opens it; hovering a pin with a mouse shows that cafe's card (amber-tinted). View lives in the URL (?view=map). Base map is visually muted; pins carry the color. Key: NEXT_GOOGLE_MAPS_API_KEY (passed from the server; must be HTTP-referrer restricted).
-- Default order: Bayesian average rating, (v/(v+m))*R + (m/(v+m))*C with m=50, C=mean rating, v=review count, plus COMPLETENESS_WEIGHT (0.3) * completeness, where completeness = (non-null restroom, dogs, outdoor + 1 if a Google summary is shown) / 4. "Near me" sorts by distance with "N min walk" (~80 m/min); on by default only if geolocation permission was already granted. Location stays in browser memory: never sent, logged, or stored.
+- Default order: Bayesian average rating, (v/(v+m))*R + (m/(v+m))*C with m=50, C=mean rating, v=review count, plus COMPLETENESS_WEIGHT (0.3) * completeness, where completeness = (non-null restroom, dogs, outdoor + 1 if a Google summary is shown) / 4. "Near me" sorts by distance with "N min walk" (~80 m/min); on by default only if geolocation permission was already granted. Near-me location stays in browser memory: never sent, logged, or stored. The only exception is the WiFi speed test: location is sent once, to /api/speedtest/start, when the user taps Test; it is used for the geofence and discarded, and only distance_m and accuracy_m are stored.
 - All times computed in America/New_York.
+- WiFi speed test (spec: docs/wifi-spec.md, plan: docs/wifi-plan.md; spec is the source of truth). Runs in the browser on explicit tap; results are client-reported, so trust comes from layered checks and aggregation, not any one check. Never store the raw IP (only HMAC of the /24 or /48) or coordinates. Disclosure line under the Test button: "We store the speeds, the distance from the cafe, and your network provider. Your location and IP address are not stored." Reads on the site go through cafes_public wifi_* columns only; speed_tests and speed_test_starts have no anon access (service role from the API only). Tested cafes show up on the card; "Be the first to test" lives in the drawer; the near-me banner ("Looks like you're at X. Test the WiFi?") is the main call to action.
 - Never store raw Google review text. The ETL does not even fetch reviews; store only derived labels.
 - ETL runs biweekly; Google data must not be older than 30 days.
 - Secrets live in .env files, never committed.
 
 ## Out of scope for v1
-Menu prices (ETL code kept behind a flag), laptop policy and WiFi (both return later with the speed test), share button, laptop time-limit policies, other neighborhoods, serves_food extraction.
+Menu prices (ETL code kept behind a flag), laptop policy (returns later), share button, laptop time-limit policies, other neighborhoods, serves_food extraction.

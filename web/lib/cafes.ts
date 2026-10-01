@@ -28,6 +28,11 @@ export const CAFE_COLUMNS = [
   "ai_summary_source",
   "google_refreshed_at",
   "is_fresh",
+  "wifi_down_mbps",
+  "wifi_up_mbps",
+  "wifi_latency_ms",
+  "wifi_sample_days",
+  "wifi_last_tested_at",
 ] as const satisfies readonly (keyof Cafe)[];
 
 // Revalidate hourly as a fallback; the ETL also triggers /api/revalidate after each write.

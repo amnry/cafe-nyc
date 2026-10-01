@@ -1,12 +1,14 @@
 "use client";
 
 import { ExternalLink, X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { safeWebsite, summaryAttribution, visibleSummary } from "@/lib/drawer";
 import { streetLine } from "@/lib/format";
 import type { OpenStatus } from "@/lib/hours";
 import type { Cafe, TriState } from "@/lib/types";
+import { isEarlyData, timeAgo, wifiSummary } from "@/lib/wifi";
 import { MapsLink, MONO_LABEL, PriceLevel, Rating, StaleNote, StatusText, TriValue } from "./bits";
+import { WifiTest } from "./WifiTest";
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -19,8 +21,14 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 
 const tri = (v: TriState) => <TriValue value={v} />;
 
-export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: OpenStatus | null; onClose: () => void }) {
+export function DetailDrawer({ cafe, status, turnstileSiteKey, onClose }: {
+  cafe: Cafe;
+  status: OpenStatus | null;
+  turnstileSiteKey: string | null;
+  onClose: () => void;
+}) {
   const ref = useRef<HTMLDialogElement>(null);
+  const [openedAt] = useState(() => Date.now()); // for "Last tested X ago"
 
   useEffect(() => {
     const dialog = ref.current;
@@ -31,6 +39,8 @@ export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: Op
   const attribution = summaryAttribution(cafe.ai_summary_source);
   const site = safeWebsite(cafe.website);
   const address = streetLine(cafe.street_address, cafe.address);
+  const wifi = wifiSummary(cafe);
+  const lastTested = timeAgo(cafe.wifi_last_tested_at, openedAt);
 
   return (
     <dialog
@@ -86,6 +96,20 @@ export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: Op
           <Fact label="Outdoor">{tri(cafe.outdoor_seating)}</Fact>
           <Fact label="Wine">{tri(cafe.serves_wine)}</Fact>
           <Fact label="Reservable">{tri(cafe.reservable)}</Fact>
+          <Fact label="WiFi">
+            {wifi ? (
+              <span className="flex flex-col items-end text-right">
+                <span className="text-[13px] tabular-nums">
+                  {wifi}
+                  {isEarlyData(cafe) && <> · early data</>}
+                  {cafe.wifi_latency_ms !== null && <> · {Math.round(cafe.wifi_latency_ms)} ms</>}
+                </span>
+                {lastTested && <span className={`${MONO_LABEL} text-muted`}>Last tested {lastTested}</span>}
+              </span>
+            ) : (
+              <span className="text-[13px] text-dim">Untested</span>
+            )}
+          </Fact>
           {site && (
             <Fact label="Website">
               <a
@@ -100,6 +124,8 @@ export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: Op
             </Fact>
           )}
         </dl>
+
+        <WifiTest cafeId={cafe.id} untested={wifi === null} siteKey={turnstileSiteKey} />
 
         <div className="mt-auto pt-6">
           <MapsLink cafe={cafe} />

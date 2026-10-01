@@ -7,6 +7,7 @@ const base: Cafe = {
   neighborhood: "West Village", website: null, google_maps_uri: null, price_level: null, business_status: null,
   opening_hours: null, restroom: null, allows_dogs: null, outdoor_seating: null, reservable: null, serves_wine: null,
   ai_summary: null, ai_summary_source: null, google_refreshed_at: null, is_fresh: true,
+  wifi_down_mbps: null, wifi_up_mbps: null, wifi_latency_ms: null, wifi_sample_days: 0, wifi_last_tested_at: null,
 };
 const tueDay = [{ open: { day: 2, hour: 8, minute: 0 }, close: { day: 2, hour: 17, minute: 0 } }];
 const wedDay = [{ open: { day: 3, hour: 8, minute: 0 }, close: { day: 3, hour: 17, minute: 0 } }];

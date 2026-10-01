@@ -7,6 +7,7 @@ const base: Cafe = {
   neighborhood: "West Village", website: null, google_maps_uri: null, price_level: null, business_status: null,
   opening_hours: null, restroom: null, allows_dogs: null, outdoor_seating: null, reservable: null, serves_wine: null,
   ai_summary: null, ai_summary_source: null, google_refreshed_at: null, is_fresh: true,
+  wifi_down_mbps: null, wifi_up_mbps: null, wifi_latency_ms: null, wifi_sample_days: 0, wifi_last_tested_at: null,
 };
 const cafe = (id: string, rating: number | null, count: number | null): Cafe => ({ ...base, id, name: id, rating, rating_count: count });
 
