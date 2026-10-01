@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://3rdplacenyc.com"),
   title: TITLE,
   description: DESCRIPTION,
-  // og:image / twitter:image come from app/opengraph-image.tsx and app/twitter-image.tsx
+  // og:image / twitter:image come from app/opengraph-image.png and app/twitter-image.png (same file), alt text from the matching .alt.txt
   openGraph: {
     type: "website",
     url: "/",
