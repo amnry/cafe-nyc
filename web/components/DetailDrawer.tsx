@@ -7,6 +7,7 @@ import { streetLine } from "@/lib/format";
 import type { OpenStatus } from "@/lib/hours";
 import type { Cafe, TriState } from "@/lib/types";
 import { MapsLink, MONO_LABEL, PriceLevel, Rating, StaleNote, StatusText, TriValue } from "./bits";
+import { WifiTest } from "./WifiTest";
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -100,6 +101,8 @@ export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: Op
             </Fact>
           )}
         </dl>
+
+        <WifiTest cafeId={cafe.id} />
 
         <div className="mt-auto pt-6">
           <MapsLink cafe={cafe} />
