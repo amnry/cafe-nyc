@@ -1,0 +1,37 @@
+export type TriState = boolean | null; // null = unknown, never shown as "no"
+
+export type AiSummarySource = "generative" | "editorial" | "haiku";
+
+export interface HoursPoint {
+  day: number; // 0 = Sunday ... 6 = Saturday (Google convention)
+  hour: number;
+  minute: number;
+}
+
+export interface HoursPeriod {
+  open: HoursPoint;
+  close?: HoursPoint; // absent for 24/7 places
+}
+
+export interface Cafe {
+  id: string;
+  slug: string;
+  name: string;
+  lat: number | null;
+  lng: number | null;
+  neighborhood: string;
+  website: string | null;
+  google_maps_uri: string | null;
+  price_level: number | null; // 0-4
+  business_status: string | null;
+  opening_hours: HoursPeriod[] | null;
+  restroom: TriState;
+  allows_dogs: TriState;
+  outdoor_seating: TriState;
+  reservable: TriState;
+  serves_wine: TriState;
+  ai_summary: string | null;
+  ai_summary_source: AiSummarySource | null;
+  google_refreshed_at: string | null;
+  is_fresh: boolean | null;
+}
