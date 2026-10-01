@@ -8,7 +8,7 @@ import { MONO_LABEL } from "./bits";
 export function LiveStatus() {
   const now = useNow();
   return (
-    <p className={`${MONO_LABEL} min-h-4 text-accent`}>
+    <p className={`${MONO_LABEL} min-h-4 text-foreground`}>
       New York
       {now && <> · {formatNyClock(now)}</>}
     </p>

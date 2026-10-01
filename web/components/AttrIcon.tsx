@@ -20,7 +20,7 @@ export function AttrGlyph({ kind, size = 14 }: { kind: AttrKind; size?: number }
 }
 
 /**
- * Card attribute icon. true = accent + glow, false = dimmed + diagonal slash, null = not rendered
+ * Card attribute icon. true = ink + amber glow, false = dimmed + diagonal slash, null = not rendered
  * (unknown is never drawn as "no"). Hover or keyboard focus shows a tooltip; a tap toggles it on touch devices
  * and any outside tap closes it. A mouse click never pins it open.
  */
@@ -51,15 +51,15 @@ export function AttrIcon({ kind, value }: { kind: AttrKind; value: TriState }) {
         onClick={() => pointer.current !== "mouse" && setOpen((o) => !o)}
         onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
         className={
-          "relative inline-flex p-1 focus-visible:outline-2 focus-visible:outline-accent " +
-          (value ? "text-accent" : "text-dim opacity-60")
+          "relative inline-flex p-1 focus-visible:outline-2 focus-visible:outline-foreground " +
+          (value ? "text-foreground" : "text-dim opacity-70")
         }
       >
         <Icon
           size={16}
           strokeWidth={1.75}
           aria-hidden
-          style={value ? { filter: "drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 70%, transparent))" } : undefined}
+          style={value ? { filter: "drop-shadow(0 0 3px var(--accent)) drop-shadow(0 0 1px var(--accent))" } : undefined}
         />
         {!value && (
           <svg viewBox="0 0 24 24" aria-hidden className="pointer-events-none absolute inset-1 size-4">
@@ -70,8 +70,8 @@ export function AttrIcon({ kind, value }: { kind: AttrKind; value: TriState }) {
       <span
         role="tooltip"
         className={
-          "pointer-events-none absolute right-0 bottom-full z-20 mb-1 border border-line bg-surface-2 px-1.5 py-0.5 " +
-          "font-mono text-[10px] whitespace-nowrap text-foreground group-hover:block group-has-[:focus-visible]:block " +
+          "pointer-events-none absolute right-0 bottom-full z-20 mb-1 bg-foreground px-1.5 py-0.5 " +
+          "font-mono text-[10px] whitespace-nowrap text-surface group-hover:block group-has-[:focus-visible]:block " +
           (open ? "block" : "hidden")
         }
       >

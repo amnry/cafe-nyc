@@ -9,7 +9,7 @@ Users filter cafes here, then click through to Google Maps. That's the whole pro
 - /supabase/migrations: all schema changes as SQL migrations.
 
 ## Decisions (do not change without asking)
-- Card icons: restroom / dogs / outdoor seating (Lucide Toilet / Dog / Trees), each tri-state yes | no | unknown. yes = accent glow, no = dimmed + slash, unknown = not rendered (never shown as no). Filter chips for restroom and dogs reuse the icons.
+- Card icons: restroom / dogs / outdoor seating (Lucide Toilet / Dog / Trees), each tri-state yes | no | unknown. yes = ink with amber glow, no = dimmed + slash, unknown = not rendered (never shown as no). Filter chips for restroom and dogs reuse the icons.
 - Card: name, rating, $ level, restroom + dogs + outdoor icons, open now + closing time, Google Maps button.
 - Detail drawer: AI summary, outdoor seating, wine, reservable, website. Food is out of scope. Only ai_summary_source = 'generative' gets the footnote "The description above: Summarized with Gemini" (drawer only, below the Maps button; never on the card). Rows with is_fresh = false stay visible with a small "may be outdated" note.
 - Filters: restroom, dogs, open now, price level.
@@ -20,7 +20,7 @@ Users filter cafes here, then click through to Google Maps. That's the whole pro
 - Exclusions: cafes.hidden (filtered out of cafes_public). hidden_reason 'auto: ...' is set/cleared by the ETL (name contains "access required", primaryType restaurant/bar, summary says takeout-only, fewer than 5 reviews, no opening hours); 'manual: ...' is set by hand and the ETL never overrides it.
 - Address line on the site = cafes.street_address (street number + route from addressComponents).
 - Neighborhood = whichever NTA polygon (West Village or Greenwich Village) contains the cafe; boundaries in /etl/data. Cafes outside both are skipped.
-- Grid view default; map (Google Maps JS) lazy-loaded only when user opens it. View lives in the URL (?view=map). Base map is visually muted; pins carry the color. Key: NEXT_GOOGLE_MAPS_API_KEY (passed from the server; must be HTTP-referrer restricted).
+- Theme: one look on every device (no prefers-color-scheme), from the share image: amber #ffb224 page, receipt-paper cards (#fbfaf6), ink #1a1203; amber is a fill, never text on paper. Grid view default; map (Google Maps JS) lazy-loaded only when user opens it; hovering a pin with a mouse shows that cafe's card (amber-tinted). View lives in the URL (?view=map). Base map is visually muted; pins carry the color. Key: NEXT_GOOGLE_MAPS_API_KEY (passed from the server; must be HTTP-referrer restricted).
 - Default order: Bayesian average rating, (v/(v+m))*R + (m/(v+m))*C with m=50, C=mean rating, v=review count, plus COMPLETENESS_WEIGHT (0.3) * completeness, where completeness = (non-null restroom, dogs, outdoor + 1 if a Google summary is shown) / 4. "Near me" sorts by distance with "N min walk" (~80 m/min); on by default only if geolocation permission was already granted. Location stays in browser memory: never sent, logged, or stored.
 - All times computed in America/New_York.
 - Never store raw Google review text. The ETL does not even fetch reviews; store only derived labels.

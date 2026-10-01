@@ -33,7 +33,7 @@ export function SourceNote() {
         aria-describedby="data-source"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className={`${MONO_LABEL} cursor-help text-dim underline decoration-dotted underline-offset-4 hover:text-muted focus-visible:text-muted focus-visible:outline-none`}
+        className={`${MONO_LABEL} cursor-help text-muted underline decoration-dotted underline-offset-4 hover:text-foreground focus-visible:text-foreground focus-visible:outline-none`}
       >
         Source
       </button>
@@ -42,7 +42,7 @@ export function SourceNote() {
         role="tooltip"
         className={
           "pointer-events-none absolute bottom-full left-1/2 mb-2 w-max max-w-[15rem] -translate-x-1/2 " +
-          "border border-line bg-surface-2 px-3 py-2 text-xs leading-snug text-foreground shadow-lg " +
+          "bg-foreground px-3 py-2 text-xs leading-snug text-surface shadow-lg " +
           "transition duration-150 motion-reduce:transition-none " +
           (open
             ? "translate-y-0 opacity-100"

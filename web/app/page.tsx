@@ -22,7 +22,7 @@ export default async function Home() {
         <p className={`${MONO_LABEL} text-muted`}>
           Built in/for NYC <span aria-hidden>🗽</span>
         </p>
-        <span className="text-dim" aria-hidden>
+        <span className="text-muted" aria-hidden>
           ·
         </span>
         <SourceNote />

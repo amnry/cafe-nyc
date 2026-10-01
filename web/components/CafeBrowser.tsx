@@ -55,6 +55,23 @@ export function CafeBrowser({ cafes, renderedAt, mapsKey }: { cafes: Cafe[]; ren
     [visible, now],
   );
 
+  const meters = new Map(ordered.map((o) => [o.cafe.id, o.meters]));
+  // Same card in the grid and on map-pin hover.
+  const card = (cafe: Cafe) => {
+    const m = meters.get(cafe.id) ?? null;
+    return (
+      <CafeCard
+        key={cafe.id}
+        cafe={cafe}
+        status={now ? getOpenStatus(cafe.opening_hours, now) : null}
+        walk={m === null ? null : walkLabel(m)}
+        favorite={favorites.includes(cafe.id)}
+        onToggleFavorite={toggle}
+        onSelect={setSelected}
+      />
+    );
+  };
+
   return (
     <div className="flex flex-col gap-5">
       <SearchBar value={query} onCommit={setQuery} />
@@ -81,14 +98,14 @@ export function CafeBrowser({ cafes, renderedAt, mapsKey }: { cafes: Cafe[]; ren
           {query.trim() ? (
             <>
               No cafes match{" "}
-              <button type="button" className="text-accent underline underline-offset-4" onClick={() => setQuery("")}>
+              <button type="button" className="text-foreground underline decoration-2 underline-offset-4" onClick={() => setQuery("")}>
                 Clear search
               </button>
             </>
           ) : (
             <>
               Nothing here. Even the barista is confused.{" "}
-              <button type="button" className="text-accent underline underline-offset-4" onClick={() => setFilters(DEFAULT_FILTERS)}>
+              <button type="button" className="text-foreground underline decoration-2 underline-offset-4" onClick={() => setFilters(DEFAULT_FILTERS)}>
                 Clear filters
               </button>
             </>
@@ -96,25 +113,22 @@ export function CafeBrowser({ cafes, renderedAt, mapsKey }: { cafes: Cafe[]; ren
         </p>
       ) : view === "map" ? (
         mapsKey ? (
-          <CafeMap apiKey={mapsKey} cafes={visible} openIds={openIds} origin={geo.origin} onSelect={setSelected} />
+          <CafeMap
+            apiKey={mapsKey}
+            cafes={visible}
+            openIds={openIds}
+            origin={geo.origin}
+            onSelect={setSelected}
+            renderCard={card}
+          />
         ) : (
           <p className={`border border-dashed border-line p-10 text-center ${MONO_LABEL} text-muted`}>
             Map unavailable: NEXT_GOOGLE_MAPS_API_KEY is not set.
           </p>
         )
       ) : (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-          {ordered.map(({ cafe, meters }) => (
-            <CafeCard
-              key={cafe.id}
-              cafe={cafe}
-              status={now ? getOpenStatus(cafe.opening_hours, now) : null}
-              walk={meters === null ? null : walkLabel(meters)}
-              favorite={favorites.includes(cafe.id)}
-              onToggleFavorite={toggle}
-              onSelect={setSelected}
-            />
-          ))}
+        <div className="grid grid-cols-1 gap-x-3 gap-y-5 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+          {ordered.map(({ cafe }) => card(cafe))}
         </div>
       )}
       {selected && (

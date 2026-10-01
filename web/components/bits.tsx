@@ -10,11 +10,11 @@ const PRICE_WORDS = ["", "Inexpensive", "Moderate", "Expensive", "Very expensive
 /** Small monospace caps label, used for row labels and meta lines. */
 export const MONO_LABEL = "font-mono text-[9.5px] uppercase tracking-[0.16em]";
 
-/** Small outlined button that fills with the accent on hover. */
+/** Small outlined button that fills with amber on hover. */
 export const OUTLINE_BUTTON =
   `relative z-10 inline-flex items-center gap-1 border border-line px-2 py-1 ${MONO_LABEL} text-foreground ` +
-  "transition-colors duration-150 hover:border-accent hover:bg-accent hover:text-accent-ink " +
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:transition-none";
+  "transition-colors duration-150 hover:border-foreground hover:bg-accent hover:text-accent-ink " +
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground motion-reduce:transition-none";
 
 export function PriceLevel({ level }: { level: number | null }) {
   const tier = priceTier(level);
@@ -33,7 +33,7 @@ export function Rating({ cafe }: { cafe: Cafe }) {
   if (cafe.rating === null) return null;
   return (
     <span className="inline-flex items-baseline gap-1 text-[13px]" aria-label={`Rated ${cafe.rating} out of 5`}>
-      <span className="text-accent" aria-hidden>★</span>
+      <span className="text-accent-deep" aria-hidden>★</span>
       <span className="font-medium tabular-nums">{cafe.rating.toFixed(1)}</span>
       {cafe.rating_count !== null && (
         <span className="font-mono text-[10px] text-muted tabular-nums">({formatCount(cafe.rating_count)})</span>

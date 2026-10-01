@@ -52,7 +52,7 @@ export function SearchBar({ value, onCommit }: { value: string; onCommit: (q: st
         enterKeyHint="search"
         className={
           "w-full rounded-lg border border-line bg-surface py-2.5 pr-10 pl-9 text-sm text-foreground placeholder:text-dim " +
-          "focus-visible:border-accent focus-visible:outline-none [&::-webkit-search-cancel-button]:hidden"
+          "focus-visible:border-foreground focus-visible:outline-none [&::-webkit-search-cancel-button]:hidden"
         }
       />
       {text && (
@@ -60,7 +60,7 @@ export function SearchBar({ value, onCommit }: { value: string; onCommit: (q: st
           type="button"
           onClick={clear}
           aria-label="Clear search"
-          className="absolute top-1/2 right-2 -translate-y-1/2 p-1 text-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent"
+          className="absolute top-1/2 right-2 -translate-y-1/2 p-1 text-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-foreground"
         >
           <X size={16} aria-hidden />
         </button>

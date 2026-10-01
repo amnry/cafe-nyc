@@ -27,7 +27,7 @@ export function CafeCard({ cafe, status, walk, favorite, onToggleFavorite, onSel
   const summary = visibleSummary(cafe);
   return (
     <article
-      className="cafe-card relative flex flex-col gap-2 border border-line bg-surface p-3"
+      className="cafe-card relative flex flex-col gap-2 bg-surface p-3"
     >
       <header className="flex items-start justify-between gap-3">
         <h2 className="min-w-0 font-display text-xl leading-[0.95] font-bold tracking-wide uppercase">
@@ -48,8 +48,8 @@ export function CafeCard({ cafe, status, walk, favorite, onToggleFavorite, onSel
           onClick={() => onToggleFavorite(cafe.id)}
           className={
             "relative z-10 -m-1.5 shrink-0 p-1.5 transition-colors duration-150 motion-reduce:transition-none " +
-            "focus-visible:outline-2 focus-visible:outline-accent " +
-            (favorite ? "text-accent" : "text-dim hover:text-foreground")
+            "focus-visible:outline-2 focus-visible:outline-foreground " +
+            (favorite ? "text-foreground" : "text-dim hover:text-foreground")
           }
         >
           <Heart size={16} fill={favorite ? "currentColor" : "none"} aria-hidden />
@@ -76,7 +76,7 @@ export function CafeCard({ cafe, status, walk, favorite, onToggleFavorite, onSel
         <Row label="Hours">
           <span className="flex items-center justify-between gap-2">
             <StatusText status={status} />
-            {walk && <span className="font-mono text-[11px] text-accent">{walk}</span>}
+            {walk && <span className="bg-accent px-1 font-mono text-[11px] text-accent-ink">{walk}</span>}
           </span>
         </Row>
       </dl>
@@ -89,7 +89,7 @@ export function CafeCard({ cafe, status, walk, favorite, onToggleFavorite, onSel
 
       <StaleNote cafe={cafe} />
 
-      <footer className="mt-auto flex gap-1.5 pt-1">
+      <footer className="mt-auto flex gap-1.5 border-t border-dashed border-line pt-2.5">
         <MapsLink cafe={cafe} />
         <button type="button" onClick={() => onSelect(cafe)} className={OUTLINE_BUTTON}>
           Details

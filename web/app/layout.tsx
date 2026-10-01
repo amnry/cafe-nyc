@@ -1,5 +1,5 @@
 import { Analytics } from "@vercel/analytics/next";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Barlow_Condensed, Geist, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -21,6 +21,12 @@ const display = Barlow_Condensed({
 
 const TITLE = "Find your 3rd place · NYC";
 const DESCRIPTION = "Not home, not the office. Scouted cafes in NYC for working, meeting and studying.";
+
+// Browser chrome (mobile address bar) matches the amber page in every OS color mode.
+export const viewport: Viewport = {
+  themeColor: "#ffb224",
+  colorScheme: "light",
+};
 
 export const metadata: Metadata = {
   // Production origin. Relative metadata URLs (og:url, og:image, twitter:image) resolve against it.

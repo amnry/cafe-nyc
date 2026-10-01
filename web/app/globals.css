@@ -1,18 +1,21 @@
 @import "tailwindcss";
 
-/* Dark-only palette. One bright accent (amber); green is reserved for "open". */
+/* One theme on every device (no prefers-color-scheme), taken from the share image: amber page,
+   receipt-paper cards, near-black ink. Amber is a fill/highlight color, never text on paper.
+   muted passes 4.5:1 on both amber and paper; dim is for paper only. */
 :root {
-  color-scheme: dark;
-  --background: #0c0c0b;
-  --surface: #141412;
-  --surface-2: #1b1b18;
-  --line: #2a2a25;
-  --foreground: #ecebe4;
-  --muted: #8d8c82;
-  --dim: #5c5b54;
+  color-scheme: light;
+  --background: #ffb224;
+  --surface: #fbfaf6;
+  --surface-2: #f3f1ea;
+  --line: rgb(26 18 3 / 0.2);
+  --foreground: #1a1203;
+  --muted: #5c4a24;
+  --dim: #8a8170;
   --accent: #ffb224;
+  --accent-deep: #c77700;
   --accent-ink: #1a1203;
-  --open: #4ade80;
+  --open: #166534;
 }
 
 @theme inline {
@@ -25,6 +28,7 @@
   --color-dim: var(--dim);
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
+  --color-accent-deep: var(--accent-deep);
   --color-open: var(--open);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-mono-face);
@@ -42,22 +46,32 @@ body:has(dialog[open]) {
   overflow: hidden;
 }
 
-/* Card hover: lift 2px, accent border + soft glow. Keyboard focus inside the card gets the same border/glow. */
+/* Cards are receipts: paper on amber with a torn zigzag bottom edge (drawn below the box, so
+   the grid needs a row gap of at least --tear). Hover lifts 2px with a soft ink shadow; keyboard
+   focus inside the card gets an ink outline. */
 .cafe-card {
+  --tear: 6px;
+  box-shadow: 0 1px 0 rgb(26 18 3 / 0.08);
   transition:
     translate 180ms ease-out,
-    border-color 180ms ease-out,
     box-shadow 180ms ease-out;
 }
-.cafe-card:hover,
-.cafe-card:has(:focus-visible) {
-  border-color: var(--accent);
-  box-shadow:
-    0 0 0 1px var(--accent),
-    0 12px 32px -14px color-mix(in srgb, var(--accent) 60%, transparent);
+.cafe-card::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 100%;
+  height: var(--tear);
+  background: conic-gradient(from 135deg at top, var(--surface) 90deg, #0000 0) top / calc(2 * var(--tear)) var(--tear) repeat-x;
+  pointer-events: none;
 }
 .cafe-card:hover {
   translate: 0 -2px;
+  box-shadow: 0 14px 28px -16px rgb(26 18 3 / 0.55);
+}
+.cafe-card:has(:focus-visible) {
+  outline: 2px solid var(--foreground);
+  outline-offset: 3px;
 }
 @media (prefers-reduced-motion: reduce) {
   .cafe-card {
@@ -68,10 +82,23 @@ body:has(dialog[open]) {
   }
 }
 
+/* Map hover card: amber-tinted paper so it stands out from the cream base map. Overrides the
+   paper tokens for everything inside, including the torn edge. All text stays >= 4.5:1. */
+.map-card {
+  --surface: #ffd98a;
+  --surface-2: #ffcf6b;
+}
+.map-card .cafe-card {
+  /* Ring as a shadow, not an outline, so the keyboard-focus outline still applies. */
+  box-shadow:
+    0 0 0 1px var(--foreground),
+    0 14px 28px -12px rgb(26 18 3 / 0.55);
+}
+
 /* Map is context, not content (people open Google Maps for directions): mute the base
    layer so cafe pins (DOM markers) carry the color. Vector maps draw on a canvas; the
    raster fallback (no WebGL) uses /maps/vt tile images. Logo and controls stay untouched. */
 .cafe-map canvas,
 .cafe-map img[src*="/maps/vt"] {
-  filter: grayscale(0.5) brightness(0.75) contrast(1.075); /* half strength */
+  filter: grayscale(0.85) sepia(0.15) contrast(0.95);
 }

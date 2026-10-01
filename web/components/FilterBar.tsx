@@ -10,15 +10,14 @@ import { MONO_LABEL } from "./bits";
 /** A tray of segments. Groups related filters; slightly rounded, not pills. */
 function Segment({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div role="group" aria-label={label} className="inline-flex flex-wrap items-center gap-0.5 rounded-lg border border-line bg-background p-0.5">
+    <div role="group" aria-label={label} className="inline-flex flex-wrap items-center gap-0.5 rounded-lg border border-line bg-surface p-0.5">
       {children}
     </div>
   );
 }
 
 /**
- * Selected = raised surface, bright text, thin accent underline (absolutely positioned, so
- * toggling never shifts layout). Unselected = flat muted text.
+ * Selected = ink fill with paper text, like a stamped receipt line. Unselected = flat muted text.
  */
 function Chip({ pressed, onClick, children, label }: {
   pressed: boolean; onClick: () => void; children: React.ReactNode; label?: string;
@@ -32,11 +31,8 @@ function Chip({ pressed, onClick, children, label }: {
       className={
         "relative inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] leading-5 font-medium " +
         "transition-colors duration-150 motion-reduce:transition-none " +
-        "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent " +
-        (pressed
-          ? "bg-surface-2 text-foreground shadow-[inset_0_0_0_1px_var(--line)] " +
-            "after:absolute after:inset-x-3 after:bottom-0.5 after:h-px after:bg-accent after:content-['']"
-          : "text-muted hover:bg-surface hover:text-foreground")
+        "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-foreground " +
+        (pressed ? "bg-foreground text-surface" : "text-muted hover:bg-surface-2 hover:text-foreground")
       }
     >
       {children}
@@ -113,15 +109,15 @@ export function FilterBar({ filters, onChange, neighborhoods, shown, total, onSu
           disabled={shown === 0}
           className={
             "rounded-lg border border-line px-3 py-1.5 text-[13px] leading-5 font-medium text-foreground " +
-            "transition-colors duration-150 hover:border-accent motion-reduce:transition-none " +
-            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent " +
+            "transition-colors duration-150 hover:border-foreground motion-reduce:transition-none " +
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground " +
             "disabled:pointer-events-none disabled:opacity-40"
           }
         >
           Surprise me
         </button>
         <p className={`${MONO_LABEL} text-muted`} aria-live="polite">
-          <span className="text-accent">{spotsLabel(shown, total).count}</span> {spotsLabel(shown, total).rest}
+          <span className="font-bold text-foreground">{spotsLabel(shown, total).count}</span> {spotsLabel(shown, total).rest}
         </p>
       </div>
     </div>

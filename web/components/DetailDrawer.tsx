@@ -40,7 +40,7 @@ export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: Op
       onClick={(e) => {
         if (e.target === ref.current) ref.current?.close(); // click on the backdrop
       }}
-      className="fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-none w-full max-w-md border-l border-line bg-surface p-0 text-foreground backdrop:bg-black/70"
+      className="fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-none w-full max-w-md border-l border-line bg-surface p-0 text-foreground backdrop:bg-foreground/50"
     >
       <div className="flex h-full flex-col overflow-y-auto p-5">
         <div className="flex items-start justify-between gap-3">
@@ -57,7 +57,7 @@ export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: Op
             type="button"
             onClick={() => ref.current?.close()}
             aria-label="Close details"
-            className="-m-1 p-1 text-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent"
+            className="-m-1 p-1 text-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-foreground"
           >
             <X size={20} aria-hidden />
           </button>
@@ -92,7 +92,7 @@ export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: Op
                 href={site.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-sm text-accent underline underline-offset-4"
+                className="inline-flex items-center gap-1 text-sm text-foreground underline decoration-accent decoration-2 underline-offset-4"
               >
                 {site.host}
                 <ExternalLink size={12} aria-hidden />
