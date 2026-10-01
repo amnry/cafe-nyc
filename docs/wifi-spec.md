@@ -23,7 +23,7 @@ Checks, in order, each with a machine-readable reject reason:
 3. ASN lookup (ipinfo lite API). Reject known US mobile carrier ASNs and
    hosting/VPN ASNs. Keep both lists in one config file, with a source
    comment for each ASN.
-4. Rate limits: max 3 starts per (cafe, ip_prefix) per hour and
+4. Rate limits: max 10 issued starts per (cafe, ip_prefix) per hour and
    10 per device_id per day.
 On pass: return a session token = HMAC(SPEEDTEST_TOKEN_SECRET) over
 {cafe_id, ip_prefix_hash, asn, issued_at, nonce}, expiring in 5 minutes.
@@ -31,7 +31,7 @@ On pass: return a session token = HMAC(SPEEDTEST_TOKEN_SECRET) over
 ### POST /api/speedtest/submit
 Input: session_token, results.
 Checks: valid signature and not expired; nonce unused; the current IP
-prefix matches the token's; elapsed time 5 to 120 s (test runs ~10 s); plausible bounds
+prefix matches the token's, or the current ASN matches the token's; elapsed time 5 to 120 s (test runs ~15 s); plausible bounds
 (down 0.1 to 2000, up 0.1 to 2000, latency 1 to 2000 ms).
 Status:
 - accepted: all checks pass and either the cafe has no known network yet

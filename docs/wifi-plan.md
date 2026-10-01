@@ -18,10 +18,37 @@ below and listed at the end. Execution: one phase at a time, commit after each, 
 - Migrations in `supabase/migrations/<ts>_<name>.sql`; view changes use `create or replace view cafes_public`, old columns first and in order, new ones appended.
 - `web/lib/distance.ts#distanceMeters` for the geofence and banner. `web/lib/cafes.ts#CAFE_COLUMNS` is an explicit whitelist; wifi columns are added to it (laptop/prices stay banned in `cafes.test.ts`).
 
-## Test timing (10-second test)
-- The browser test is configured to run ~10 s total (shortened @cloudflare/speedtest measurement list; exact config chosen in Phase 3 and verified against real results).
-- Submit elapsed-time bound is **5 to 120 s** (spec updated). Token still expires 5 minutes after issue.
-- Drawer progress UI is sized for ~10 s (a single progress bar with phases down / up / latency), not a long-running test.
+## Test timing (15-second test)
+Config lives in `web/lib/speedtest/client-config.ts` (Phase 3). Option names checked against the
+@cloudflare/speedtest 1.14.1 README.
+```ts
+{
+  autoStart: false,
+  measurements: [
+    { type: "latency", numPackets: 10 },
+    { type: "download", bytes: 1e5, count: 1, bypassMinDuration: true },
+    { type: "download", bytes: 1e6, count: 4 },
+    { type: "download", bytes: 1e7, count: 3 },
+    { type: "download", bytes: 2.5e7, count: 1 },
+    { type: "upload", bytes: 1e5, count: 2, bypassMinDuration: true },
+    { type: "upload", bytes: 1e6, count: 4 },
+    { type: "upload", bytes: 5e6, count: 2 },
+  ],
+  bandwidthFinishRequestDuration: 1000, // library default; fast networks still step up to larger files
+  measureDownloadLoadedLatency: false,  // no loaded-latency measurements
+  measureUploadLoadedLatency: false,
+}
+```
+- No `packetLoss` measurement (needs a TURN server; not needed).
+- Summary fields: `getSummary()` gives `download` / `upload` in **bps** (client converts to Mbps), `latency` and `jitter` in ms. `getTotalDurationMs()` gives the run time.
+- Submit elapsed-time bound stays **5 to 120 s** (spec updated). Token still expires 5 minutes after issue.
+- UI: progress bar sized for ~15 s plus the live download number while running (from `onResultsChange` / `results.getSummary().download`).
+- Dev: log actual duration (`getTotalDurationMs()`) to the console when `NODE_ENV=development`. If a normal connection runs over ~18 s, tune the sequence (count first, then drop the 25 MB download).
+
+## Local development (no real cafe address in git)
+- `web/scripts/seed-test-cafe.mjs` (npm script `seed:test-cafe`): inserts one cafe, "Test Cafe (local)", `google_place_id = 'local-test-cafe'`, at `TEST_CAFE_LAT` / `TEST_CAFE_LNG` from `web/.env.local` (gitignored). `--remove` deletes it (speed tests cascade). It refuses to run unless the Supabase URL is `localhost` / `127.0.0.1` (URL and service-role key come from `supabase status`, never from the production values in `.env.local`).
+- `clientIp()` also reads `cf-connecting-ip`, only when `NODE_ENV=development`, so a Cloudflare tunnel (`cloudflared tunnel --url localhost:3000`) gives a real client IP for phone testing. In production that header is ignored.
+- Turnstile test keys locally. Steps are documented in `docs/wifi-local-dev.md`.
 
 ## Phase 1: schema
 - `supabase/migrations/20261002120000_speed_tests.sql`: `speed_test_starts`, `speed_tests`, indexes, RLS on, `revoke all` from anon/authenticated, `speedtest_known_asn(uuid)`.
@@ -83,25 +110,29 @@ grant execute on function speedtest_known_asn(uuid) to service_role;
 ## Phase 2: server routes + unit tests (`web/lib/speedtest/`, server-only; add `server-only` dep)
 | File | Contents |
 |---|---|
-| `ip.ts` | `clientIp(headers)` (x-real-ip, then first x-forwarded-for), `ipPrefix(ip)` (/24 v4, /48 v6, v4-mapped v6 as v4), `hmacHex`, `prefixHash`, `deviceHash` (IP_HASH_SALT) |
+| `ip.ts` | `clientIp(headers, {dev})` (x-real-ip, then first x-forwarded-for; `cf-connecting-ip` first only when `dev`), `ipPrefix(ip)` (/24 v4, /48 v6, v4-mapped v6 as v4), `hmacHex`, `prefixHash`, `deviceHash` (IP_HASH_SALT) |
 | `geofence.ts` | reject if accuracy > 300 (`low_accuracy`); pass if `d - min(acc,100) <= 75`, else `too_far` |
 | `asn-config.ts` | `MOBILE_ASNS`, `HOSTING_VPN_ASNS`: `{asn, name, source}`; **every entry has a PeeringDB or bgp.he.net URL**. Comment: T-Mobile Home Internet shares T-Mobile's AS, a known false negative (that cafe cannot be tested) |
 | `asn.ts` | `classifyAsn` gives `ok`, `mobile_network` or `vpn_or_hosting` |
 | `private-relay.ts` | IP vs Apple's published egress ranges; snapshot CIDRs in `data/` built by `web/scripts/update-relay-ranges.ts` from https://mask-api.icloud.com/egress-ip-ranges.csv (too big to fetch per request). Reason `private_relay`: "Turn off Private Relay for this site, or use Chrome." |
 | `ipinfo.ts` | `lookupAsn(ip)`: ipinfo lite API, 3 s timeout, failure gives `asn_lookup_failed` |
 | `turnstile.ts` | `verifyTurnstile(token, ip)` |
-| `token.ts` | `signSession` / `verifySession`: `base64url(json).base64url(hmac-sha256)`, `timingSafeEqual`, 5 min exp; payload `{cafe_id, ip_prefix_hash, asn, asn_org, issued_at, nonce}` |
+| `token.ts` | `signSession` / `verifySession`: `base64url(json).base64url(hmac-sha256)`, `timingSafeEqual`, 5 min exp; payload `{cafe_id, ip_prefix_hash, asn, asn_org, issued_at, nonce}` plus `device_id_hash`, `distance_m`, `accuracy_m` (signed, so /submit needs no extra DB read to store them) |
 | `bounds.ts` | elapsed **5–120 s**, down/up 0.1–2000, latency 1–2000, jitter >= 0 |
-| `db.ts` | service-role PostgREST helpers: insert start/test (409 on nonce gives `nonce_reused`), counts, `speedtest_known_asn` rpc |
+| `db.ts` | service-role PostgREST helpers behind a `Db` interface: `getCafe`, `countIssuedStarts`, `insertStart`, `insertTest` (409 gives nonce conflict), `knownAsn` rpc |
+| `start.ts`, `submit.ts` | `handleStart(request, deps)` / `handleSubmit(request, deps)`: all logic, with injected `db`, `fetch`, `now`, env. Route files only wire real deps (`deps.ts`) |
 | `reasons.ts` | shared `RejectReason` union + plain-English text (also used by the drawer) |
 
 - `web/app/api/speedtest/start/route.ts` order: Turnstile, **Private Relay**, geofence, ASN lookup + classify, rate limits, issue token. Rate limits: **10 issued starts per (cafe, ip_prefix) per hour**, 10 per device_id per day (count `speed_test_starts.status='issued'`). Start rejects are written to `speed_test_starts` (except Turnstile failures, so bots cannot fill the table).
 - `web/app/api/speedtest/submit/route.ts`: signature + expiry, nonce unused, **IP prefix hash matches OR asn matches the token**, elapsed + bounds. accepted / flagged / rejected per spec (rejects stored with reason). On accepted: `revalidateTag(CAFES_TAG, {expire: 0})`.
+- Submit stores a rejected row for every failed check once the token signature is valid (a replayed nonce is stored with a null nonce, since the column is unique). The client only sees `{status:"ok"}` for accepted and flagged alike.
 - Both: `export const runtime = "nodejs"`; rejects return `{status:"rejected", reason}` with 4xx.
+- `web/vitest.config.mts` (new): `@` alias and a stub for `server-only`.
 - Tests: `ip`, `geofence`, `asn`, `private-relay`, `token` (sign/verify/tamper/expiry), `bounds` (5 / 120 edges), `routes` (mocked fetch: nonce reuse, check order, accepted vs flagged, prefix-or-ASN match).
 
 ## Phase 3: drawer UI
-- `web/components/WifiTest.tsx`: states idle, locating, prechecking, running (~10 s progress), result, thanks, error(reason). Own high-accuracy geolocation call (not `useGeolocation`). Turnstile + `@cloudflare/speedtest` dynamically imported on tap. "Be the first to test" shown when untested.
+- `web/lib/speedtest/client-config.ts`: the 15 s measurement config above.
+- `web/components/WifiTest.tsx`: states idle, locating, prechecking, running (~15 s progress bar + live download number), result, thanks, error(reason). Own high-accuracy geolocation call (not `useGeolocation`). Turnstile + `@cloudflare/speedtest` dynamically imported on tap. "Be the first to test" shown when untested.
 - `web/lib/useDeviceId.ts`: UUID in localStorage with in-memory fallback.
 - `web/components/DetailDrawer.tsx`: WiFi Fact + WifiTest + disclosure line (CLAUDE.md wording).
 - Before shipping: check Cloudflare terms for embedding / using speed.cloudflare.com (library is MIT).
