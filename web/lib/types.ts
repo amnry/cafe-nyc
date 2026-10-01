@@ -17,6 +17,9 @@ export interface Cafe {
   id: string;
   slug: string;
   name: string;
+  address: string | null;
+  rating: number | null;
+  rating_count: number | null;
   lat: number | null;
   lng: number | null;
   neighborhood: string;

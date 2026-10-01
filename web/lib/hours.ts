@@ -6,9 +6,10 @@ const MIN_PER_WEEK = 7 * MIN_PER_DAY;
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export type OpenStatus =
-  | { state: "open"; label: string; closesAt: string | null } // closesAt null = open 24 hours
-  | { state: "closed"; label: string; opensAt: string | null }
-  | { state: "unknown"; label: string }; // no hours data: never shown as closed
+  // label: drawer text ("Open · closes 5 PM"); short: card text ("Open · til 5PM")
+  | { state: "open"; label: string; short: string; closesAt: string | null } // closesAt null = open 24 hours
+  | { state: "closed"; label: string; short: string; opensAt: string | null }
+  | { state: "unknown"; label: string; short: string }; // no hours data: never shown as closed
 
 const nyFormat = new Intl.DateTimeFormat("en-US", {
   timeZone: TZ,
@@ -25,11 +26,11 @@ export function nyWeekMinute(now: Date): number {
   return day * MIN_PER_DAY + Number(parts.hour) * 60 + Number(parts.minute);
 }
 
-export function formatTime(minuteOfDay: number): string {
+export function formatTime(minuteOfDay: number, compact = false): string {
   const h24 = Math.floor(minuteOfDay / 60) % 24;
   const m = minuteOfDay % 60;
   const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-  return `${h12}${m ? `:${String(m).padStart(2, "0")}` : ""} ${h24 < 12 ? "AM" : "PM"}`;
+  return `${h12}${m ? `:${String(m).padStart(2, "0")}` : ""}${compact ? "" : " "}${h24 < 12 ? "AM" : "PM"}`;
 }
 
 type Interval = [start: number, end: number];
@@ -62,7 +63,7 @@ function buildIntervals(periods: HoursPeriod[]): Interval[] {
 }
 
 export function getOpenStatus(periods: HoursPeriod[] | null, now: Date = new Date()): OpenStatus {
-  if (!periods || periods.length === 0) return { state: "unknown", label: "Hours unavailable" };
+  if (!periods || periods.length === 0) return { state: "unknown", label: "Hours unavailable", short: "Hours unavailable" };
 
   const t = nyWeekMinute(now);
   const intervals = buildIntervals(periods);
@@ -72,10 +73,11 @@ export function getOpenStatus(periods: HoursPeriod[] | null, now: Date = new Dat
   const current = intervals.find(([start, end]) => start <= probe && probe < end);
   if (current) {
     if (current[1] - current[0] >= 2 * MIN_PER_WEEK) {
-      return { state: "open", label: "Open 24 hours", closesAt: null };
+      return { state: "open", label: "Open 24 hours", short: "Open 24 hours", closesAt: null };
     }
     const closesAt = formatTime(current[1] % MIN_PER_DAY);
-    return { state: "open", label: `Open · closes ${closesAt}`, closesAt };
+    const short = `Open · til ${formatTime(current[1] % MIN_PER_DAY, true)}`;
+    return { state: "open", label: `Open · closes ${closesAt}`, short, closesAt };
   }
 
   // Closed: soonest merged-interval start strictly after now, wrapping the week.
@@ -88,5 +90,6 @@ export function getOpenStatus(periods: HoursPeriod[] | null, now: Date = new Dat
   const sameDay = Math.floor(opensAbs / MIN_PER_DAY) === Math.floor(t / MIN_PER_DAY);
   const dayLabel = sameDay ? "" : `${DAY_NAMES[Math.floor(opensAbs / MIN_PER_DAY) % 7]} `;
   const opensAt = `${dayLabel}${formatTime(opensAbs % MIN_PER_DAY)}`;
-  return { state: "closed", label: `Closed · opens ${opensAt}`, opensAt };
+  const short = `Closed · opens ${dayLabel}${formatTime(opensAbs % MIN_PER_DAY, true)}`;
+  return { state: "closed", label: `Closed · opens ${opensAt}`, short, opensAt };
 }

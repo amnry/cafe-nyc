@@ -1,84 +1,100 @@
-import { ExternalLink } from "lucide-react";
-import { priceTier } from "@/lib/filters";
+import { Heart } from "lucide-react";
+import { summaryAttribution } from "@/lib/drawer";
+import { shortAddress } from "@/lib/format";
 import type { OpenStatus } from "@/lib/hours";
-import type { Cafe } from "@/lib/types";
-import { TriIcon } from "./TriIcon";
+import type { Cafe, TriState } from "@/lib/types";
+import { MapsLink, MONO_LABEL, OUTLINE_BUTTON, PriceLevel, Rating, StaleNote, StatusText, TriValue } from "./bits";
 
-const PRICE_WORDS = ["", "Inexpensive", "Moderate", "Expensive", "Very expensive"];
-
-export function PriceLevel({ level }: { level: number | null }) {
-  const tier = priceTier(level);
-  if (tier === null) return null;
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <span className="text-sm font-medium tabular-nums" aria-label={`Price: ${PRICE_WORDS[tier]}`} title={PRICE_WORDS[tier]}>
-      {"$".repeat(tier)}
-      <span className="text-zinc-300 dark:text-zinc-600" aria-hidden>
-        {"$".repeat(4 - tier)}
-      </span>
-    </span>
+    <div className="grid grid-cols-[4.75rem_1fr] items-center gap-1.5">
+      <dt className={`${MONO_LABEL} text-muted`}>{label}</dt>
+      <dd>{children}</dd>
+    </div>
   );
 }
 
-export function StatusText({ status }: { status: OpenStatus | null }) {
-  // status is null until the client clock exists; keep the line's height to avoid layout shift.
-  if (!status) return <p className="min-h-5 text-sm text-zinc-400">&nbsp;</p>;
-  const tone =
-    status.state === "open" ? "text-emerald-700 dark:text-emerald-300" : "text-zinc-500 dark:text-zinc-400";
-  return <p className={`min-h-5 text-sm ${tone}`}>{status.label}</p>;
-}
-
-export function StaleNote({ cafe }: { cafe: Cafe }) {
-  if (cafe.is_fresh !== false) return null;
-  return <p className="text-xs text-amber-700 dark:text-amber-400">Info may be outdated</p>;
-}
-
-export function MapsButton({ cafe }: { cafe: Cafe }) {
-  if (!cafe.google_maps_uri) return null;
+function TriRow({ label, value }: { label: string; value: TriState }) {
   return (
-    <a
-      href={cafe.google_maps_uri}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+    <Row label={label}>
+      <TriValue value={value} />
+    </Row>
+  );
+}
+
+export function CafeCard({ cafe, status, favorite, onToggleFavorite, onSelect }: {
+  cafe: Cafe;
+  status: OpenStatus | null;
+  favorite: boolean;
+  onToggleFavorite: (id: string) => void;
+  onSelect: (cafe: Cafe) => void;
+}) {
+  const address = shortAddress(cafe.address);
+  const attribution = summaryAttribution(cafe.ai_summary_source);
+  return (
+    <article
+      className="cafe-card relative flex flex-col gap-2 border border-line bg-surface p-3"
     >
-      Open in Google Maps
-      <ExternalLink size={14} aria-hidden />
-    </a>
-  );
-}
-
-export function CafeCard({ cafe, status, onSelect }: { cafe: Cafe; status: OpenStatus | null; onSelect: (cafe: Cafe) => void }) {
-  return (
-    <article className="flex flex-col gap-3 rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-base font-semibold leading-snug">
-            <button type="button" onClick={() => onSelect(cafe)} className="text-left hover:underline">
-              {cafe.name}
-            </button>
-          </h2>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">{cafe.neighborhood}</p>
-        </div>
-        <PriceLevel level={cafe.price_level} />
-      </div>
-      <div className="flex gap-2">
-        <TriIcon kind="restroom" value={cafe.restroom} />
-        <TriIcon kind="dogs" value={cafe.allows_dogs} />
-      </div>
-      <div>
-        <StatusText status={status} />
-        <StaleNote cafe={cafe} />
-      </div>
-      <div className="mt-auto flex flex-wrap gap-2">
-        <MapsButton cafe={cafe} />
+      <header className="flex items-start justify-between gap-3">
+        <h2 className="min-w-0 font-display text-xl leading-[0.95] font-bold tracking-wide uppercase">
+          {/* Stretched button: its ::after covers the card, so the whole card opens the drawer. */}
+          <button
+            type="button"
+            onClick={() => onSelect(cafe)}
+            className="text-left after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
+          >
+            {cafe.name}
+          </button>
+        </h2>
         <button
           type="button"
-          onClick={() => onSelect(cafe)}
-          className="rounded-lg border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          aria-pressed={favorite}
+          aria-label={favorite ? `Remove ${cafe.name} from favorites` : `Save ${cafe.name} to favorites`}
+          onClick={() => onToggleFavorite(cafe.id)}
+          className={
+            "relative z-10 -m-1.5 shrink-0 p-1.5 transition-colors duration-150 motion-reduce:transition-none " +
+            "focus-visible:outline-2 focus-visible:outline-accent " +
+            (favorite ? "text-accent" : "text-dim hover:text-foreground")
+          }
         >
+          <Heart size={16} fill={favorite ? "currentColor" : "none"} aria-hidden />
+        </button>
+      </header>
+
+      <p className={`${MONO_LABEL} -mt-0.5 truncate text-muted`} title={[cafe.neighborhood, address].filter(Boolean).join(" · ")}>
+        {cafe.neighborhood}
+        {address && <> · {address}</>}
+      </p>
+
+      <div className="flex items-center gap-3">
+        <Rating cafe={cafe} />
+        <PriceLevel level={cafe.price_level} />
+      </div>
+
+      <dl className="flex flex-col gap-1">
+        <Row label="Hours">
+          <StatusText status={status} />
+        </Row>
+        <TriRow label="Restroom" value={cafe.restroom} />
+        <TriRow label="Dogs" value={cafe.allows_dogs} />
+        <TriRow label="Outdoor" value={cafe.outdoor_seating} />
+      </dl>
+
+      {cafe.ai_summary && (
+        <blockquote className="border-l-2 border-accent bg-surface-2 px-2.5 py-1.5">
+          <p className="line-clamp-3 text-[13px] leading-snug text-foreground/90 italic">{cafe.ai_summary}</p>
+          {attribution && <p className={`${MONO_LABEL} mt-1.5 text-[9px] text-dim`}>{attribution}</p>}
+        </blockquote>
+      )}
+
+      <StaleNote cafe={cafe} />
+
+      <footer className="mt-auto flex gap-1.5 pt-1">
+        <MapsLink cafe={cafe} />
+        <button type="button" onClick={() => onSelect(cafe)} className={OUTLINE_BUTTON}>
           Details
         </button>
-      </div>
+      </footer>
     </article>
   );
 }

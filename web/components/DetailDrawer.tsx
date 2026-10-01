@@ -2,19 +2,22 @@
 
 import { ExternalLink, X } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { safeWebsite, summaryAttribution, triText } from "@/lib/drawer";
+import { safeWebsite, summaryAttribution } from "@/lib/drawer";
+import { shortAddress } from "@/lib/format";
 import type { OpenStatus } from "@/lib/hours";
 import type { Cafe, TriState } from "@/lib/types";
-import { MapsButton, PriceLevel, StaleNote, StatusText } from "./CafeCard";
+import { MapsLink, MONO_LABEL, PriceLevel, Rating, StaleNote, StatusText, TriValue } from "./bits";
 
-function Fact({ label, value }: { label: string; value: TriState }) {
+function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex justify-between gap-4 py-2">
-      <dt className="text-zinc-600 dark:text-zinc-400">{label}</dt>
-      <dd className={value === null ? "text-zinc-400 dark:text-zinc-500" : "font-medium"}>{triText(value)}</dd>
+    <div className="flex items-center justify-between gap-4 py-2.5">
+      <dt className={`${MONO_LABEL} text-muted`}>{label}</dt>
+      <dd>{children}</dd>
     </div>
   );
 }
+
+const tri = (v: TriState) => <TriValue value={v} />;
 
 export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: OpenStatus | null; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -26,6 +29,7 @@ export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: Op
 
   const attribution = summaryAttribution(cafe.ai_summary_source);
   const site = safeWebsite(cafe.website);
+  const address = shortAddress(cafe.address);
 
   return (
     <dialog
@@ -35,56 +39,70 @@ export function DetailDrawer({ cafe, status, onClose }: { cafe: Cafe; status: Op
       onClick={(e) => {
         if (e.target === ref.current) ref.current?.close(); // click on the backdrop
       }}
-      className="fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-none w-full max-w-md border-l border-zinc-200 bg-background p-0 text-foreground shadow-xl backdrop:bg-black/40 dark:border-zinc-800"
+      className="fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-none w-full max-w-md border-l border-line bg-surface p-0 text-foreground backdrop:bg-black/70"
     >
       <div className="flex h-full flex-col overflow-y-auto p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 id="drawer-title" className="text-xl font-semibold leading-snug">{cafe.name}</h2>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">{cafe.neighborhood}</p>
+            <h2 id="drawer-title" className="font-display text-3xl leading-none font-bold tracking-wide uppercase">
+              {cafe.name}
+            </h2>
+            <p className={`${MONO_LABEL} mt-2 text-muted`}>
+              {cafe.neighborhood}
+              {address && <> · {address}</>}
+            </p>
           </div>
           <button
             type="button"
             onClick={() => ref.current?.close()}
             aria-label="Close details"
-            className="rounded-lg p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            className="-m-1 p-1 text-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent"
           >
-            <X size={18} aria-hidden />
+            <X size={20} aria-hidden />
           </button>
         </div>
 
         <div className="mt-3 flex items-center gap-3">
+          <Rating cafe={cafe} />
           <PriceLevel level={cafe.price_level} />
-          <StatusText status={status} />
         </div>
-        <StaleNote cafe={cafe} />
+        <div className="mt-2">
+          <StatusText status={status} long />
+        </div>
+        <div className="mt-1">
+          <StaleNote cafe={cafe} />
+        </div>
 
         {cafe.ai_summary && (
-          <section className="mt-5" aria-label="Summary">
-            <p className="leading-relaxed">{cafe.ai_summary}</p>
-            {attribution && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{attribution}</p>}
-          </section>
+          <blockquote className="mt-5 border-l-2 border-accent bg-surface-2 px-3 py-2.5">
+            <p className="leading-relaxed text-foreground/90 italic">{cafe.ai_summary}</p>
+            {attribution && <p className={`${MONO_LABEL} mt-2 text-[9px] text-dim`}>{attribution}</p>}
+          </blockquote>
         )}
 
-        <dl className="mt-5 divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
-          <Fact label="Outdoor seating" value={cafe.outdoor_seating} />
-          <Fact label="Serves wine" value={cafe.serves_wine} />
-          <Fact label="Reservable" value={cafe.reservable} />
+        <dl className="mt-5 divide-y divide-line border-y border-line">
+          <Fact label="Restroom">{tri(cafe.restroom)}</Fact>
+          <Fact label="Dogs">{tri(cafe.allows_dogs)}</Fact>
+          <Fact label="Outdoor">{tri(cafe.outdoor_seating)}</Fact>
+          <Fact label="Wine">{tri(cafe.serves_wine)}</Fact>
+          <Fact label="Reservable">{tri(cafe.reservable)}</Fact>
           {site && (
-            <div className="flex justify-between gap-4 py-2">
-              <dt className="text-zinc-600 dark:text-zinc-400">Website</dt>
-              <dd>
-                <a href={site.href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline underline-offset-2">
-                  {site.host}
-                  <ExternalLink size={12} aria-hidden />
-                </a>
-              </dd>
-            </div>
+            <Fact label="Website">
+              <a
+                href={site.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-sm text-accent underline underline-offset-4"
+              >
+                {site.host}
+                <ExternalLink size={12} aria-hidden />
+              </a>
+            </Fact>
           )}
         </dl>
 
         <div className="mt-auto pt-6">
-          <MapsButton cafe={cafe} />
+          <MapsLink cafe={cafe} />
         </div>
       </div>
     </dialog>

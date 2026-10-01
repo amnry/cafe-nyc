@@ -14,7 +14,7 @@ const weekdays = [1, 2, 3, 4, 5].map((d) => P(d, 8, 0, d, 17, 0));
 
 describe("getOpenStatus: ordinary hours", () => {
   it("open mid-day, shows closing time", () => {
-    expect(getOpenStatus(weekdays, at(2, 12))).toEqual({ state: "open", label: "Open · closes 5 PM", closesAt: "5 PM" });
+    expect(getOpenStatus(weekdays, at(2, 12))).toEqual({ state: "open", label: "Open · closes 5 PM", short: "Open · til 5PM", closesAt: "5 PM" });
   });
   it("open exactly at opening, closed exactly at closing", () => {
     expect(getOpenStatus(weekdays, at(2, 8)).state).toBe("open");
@@ -75,7 +75,7 @@ describe("getOpenStatus: 24 hours", () => {
   it("24/7 (no close) is always open with no closing time", () => {
     const always: HoursPeriod[] = [{ open: { day: 0, hour: 0, minute: 0 } }];
     for (const d of [new Date(Date.UTC(2026, 8, 27, 4)), at(3, 12), at(6, 23, 59)]) {
-      expect(getOpenStatus(always, d)).toEqual({ state: "open", label: "Open 24 hours", closesAt: null });
+      expect(getOpenStatus(always, d)).toEqual({ state: "open", label: "Open 24 hours", short: "Open 24 hours", closesAt: null });
     }
   });
   it("seven back-to-back midnight-to-midnight days merge into 24/7", () => {
@@ -127,6 +127,15 @@ describe("time zone handling", () => {
       state: "open",
       closesAt: "5 PM",
     });
+  });
+});
+
+describe("card short labels", () => {
+  it("compact times, day name only when not today", () => {
+    expect(getOpenStatus(weekdays, at(2, 7)).short).toBe("Closed · opens 8AM");
+    expect(getOpenStatus(weekdays, at(2, 20)).short).toBe("Closed · opens Wed 8AM");
+    expect(getOpenStatus([P(1, 8, 0, 1, 17, 30)], at(1, 9)).short).toBe("Open · til 5:30PM");
+    expect(getOpenStatus(null, at(1, 9)).short).toBe("Hours unavailable");
   });
 });
 
