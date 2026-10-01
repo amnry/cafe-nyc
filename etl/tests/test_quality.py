@@ -33,6 +33,17 @@ def test_auto_hide_takeout_only():
     assert auto_hide_reason("X", "cafe", ["Coffee shop with baked goods and grab-and-go bites."]) is None
 
 
+def test_auto_hide_few_reviews_or_no_hours():
+    assert auto_hide_reason("X", "cafe", [], review_count=4) == "auto: fewer than 5 reviews"
+    assert auto_hide_reason("X", "cafe", [], review_count=0) == "auto: fewer than 5 reviews"
+    assert auto_hide_reason("X", "cafe", [], review_count=5, has_hours=True) is None
+    assert auto_hide_reason("X", "cafe", [], review_count=881, has_hours=False) == "auto: no hours listed"
+    # too few reviews is reported first when both apply
+    assert auto_hide_reason("X", "cafe", [], review_count=1, has_hours=False) == "auto: fewer than 5 reviews"
+    # earlier rules still win
+    assert auto_hide_reason("X", "wine_bar", [], review_count=1) == "auto: primaryType wine_bar"
+
+
 def test_check_summary():
     reviews = ["The staff were lovely and the cortado was the best I have had in the city"]
     assert check_summary("", reviews) == (None, None)

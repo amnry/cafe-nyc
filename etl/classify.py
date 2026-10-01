@@ -1,6 +1,9 @@
 """Heuristic flags for discovered places that may not be cafes, for human review."""
 import re
 
+# Places with fewer Google reviews than this are hidden: too little signal to recommend.
+MIN_REVIEWS = 5
+
 BAR_TYPES = {"bar", "wine_bar", "pub", "cocktail_bar", "night_club", "brewery", "sports_bar", "beer_garden"}
 BUBBLE_TEA_NAMES = re.compile(
     r"\b(boba|bubble tea|milk tea|gong cha|kung fu tea|tiger sugar|xing fu tang|chatime|vivi|tea ?bar)\b", re.I)
@@ -52,7 +55,13 @@ TAKEOUT_ONLY = re.compile(
 )
 
 
-def auto_hide_reason(name: str, primary_type: str | None, summaries: list[str | None]) -> str | None:
+def auto_hide_reason(
+    name: str,
+    primary_type: str | None,
+    summaries: list[str | None],
+    review_count: int | None = None,  # None = not checked; a place with no reviews is 0, not None
+    has_hours: bool = True,
+) -> str | None:
     """Why the ETL should hide a place automatically, or None to show it."""
     if "access required" in (name or "").lower():
         return "auto: name says access required"
@@ -62,4 +71,8 @@ def auto_hide_reason(name: str, primary_type: str | None, summaries: list[str | 
     for s in summaries:
         if s and TAKEOUT_ONLY.search(s):
             return "auto: summary says takeout-only"
+    if review_count is not None and review_count < MIN_REVIEWS:
+        return f"auto: fewer than {MIN_REVIEWS} reviews"
+    if not has_hours:
+        return "auto: no hours listed"
     return None

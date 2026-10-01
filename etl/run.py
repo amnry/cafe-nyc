@@ -116,7 +116,10 @@ def process(place_id: str, places: Places, client, stats: Stats, existing: dict,
     # Visibility. A manual decision (hidden_reason 'manual: ...') is never overridden.
     stored_reason = (existing.get(place_id) or {}).get("hidden_reason") or ""
     g = haiku.google_summaries(place)
-    auto = auto_hide_reason(row["name"], place.get("primaryType"), [g["generative"], g["editorial"], row["ai_summary"]])
+    auto = auto_hide_reason(
+        row["name"], place.get("primaryType"), [g["generative"], g["editorial"], row["ai_summary"]],
+        review_count=row["rating_count"] or 0, has_hours=bool(row["opening_hours"]),
+    )
     if not stored_reason.startswith("manual"):
         row["hidden"] = auto is not None
         row["hidden_reason"] = auto
