@@ -104,7 +104,10 @@ export function DetailDrawer({ cafe, status, turnstileSiteKey, onClose }: {
                   {isEarlyData(cafe) && <> · early data</>}
                   {cafe.wifi_latency_ms !== null && <> · {Math.round(cafe.wifi_latency_ms)} ms</>}
                 </span>
-                {lastTested && <span className={`${MONO_LABEL} text-muted`}>Last tested {lastTested}</span>}
+                <span className={`${MONO_LABEL} text-muted`}>
+                  Visitor-tested
+                  {lastTested && <> · Last tested {lastTested}</>}
+                </span>
               </span>
             ) : (
               <span className="text-[13px] text-dim">Untested</span>

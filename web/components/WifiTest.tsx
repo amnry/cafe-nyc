@@ -21,6 +21,9 @@ type Phase =
 const DISCLOSURE =
   "We store the speeds, the distance from the cafe, and your network provider. Your location and IP address are not stored.";
 
+const CROWDSOURCED =
+  "WiFi speeds here come from visitors like you, tested at the cafe on its WiFi. Each test is checked before it counts.";
+
 class ClientError extends Error {
   constructor(public reason: ClientReason) {
     super(reason);
@@ -131,9 +134,12 @@ export function WifiTest({ cafeId, untested, siteKey }: { cafeId: string; untest
 
       <div className="mt-2" aria-live="polite">
         {phase.kind === "idle" && (
-          <button type="button" onClick={run} className={OUTLINE_BUTTON}>
-            {untested ? "Be the first to test this cafe's WiFi" : "Test this cafe's WiFi"}
-          </button>
+          <>
+            <p className="mb-2 text-sm leading-snug">{CROWDSOURCED}</p>
+            <button type="button" onClick={run} className={OUTLINE_BUTTON}>
+              {untested ? "Be the first to test this cafe's WiFi" : "Test this cafe's WiFi"}
+            </button>
+          </>
         )}
         {phase.kind === "locating" && <p className="text-sm">Checking your location… allow it if your browser asks.</p>}
         {phase.kind === "prechecking" && <p className="text-sm">Checking your network…</p>}

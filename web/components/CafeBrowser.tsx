@@ -7,6 +7,7 @@ import { useFavorites } from "@/lib/favorites";
 import { applyFilters, DEFAULT_FILTERS, type Filters } from "@/lib/filters";
 import { getOpenStatus } from "@/lib/hours";
 import { pickSurprise } from "@/lib/live";
+import { nextBatch, PAGE_SIZE } from "@/lib/paging";
 import { createSearcher, searchCafes } from "@/lib/search";
 import type { Cafe } from "@/lib/types";
 import { useGeolocation } from "@/lib/useGeolocation";
@@ -60,6 +61,13 @@ export function CafeBrowser({ cafes, renderedAt, mapsKey, turnstileSiteKey }: {
     () => new Set(now ? visible.filter((c) => getOpenStatus(c.opening_hours, now).state === "open").map((c) => c.id) : []),
     [visible, now],
   );
+
+  // Grid shows PAGE_SIZE cards; "Show more" grows the same list. Any change to what is listed (filters,
+  // search, near-me, view) starts over at PAGE_SIZE. Map and "Surprise me" always use the full list.
+  const listKey = [JSON.stringify(filters), query, view, geo.origin ? `${geo.origin.lat},${geo.origin.lng}` : ""].join("|");
+  const [paging, setPaging] = useState({ key: listKey, limit: PAGE_SIZE });
+  const limit = paging.key === listKey ? paging.limit : PAGE_SIZE;
+  const more = nextBatch(limit, ordered.length);
 
   // Near me on and within 75 m of a cafe: offer the WiFi test. Computed here from the in-memory position.
   const here = useMemo(() => (geo.origin ? cafeAtLocation(cafes, geo.origin) : null), [cafes, geo.origin]);
@@ -149,9 +157,20 @@ export function CafeBrowser({ cafes, renderedAt, mapsKey, turnstileSiteKey }: {
           </p>
         )
       ) : (
-        <div className="grid grid-cols-1 gap-x-3 gap-y-5 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-          {ordered.map(({ cafe }) => card(cafe))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-x-3 gap-y-5 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+            {ordered.slice(0, limit).map(({ cafe }) => card(cafe))}
+          </div>
+          {more > 0 && (
+            <button
+              type="button"
+              onClick={() => setPaging({ key: listKey, limit: limit + more })}
+              className={`${MONO_LABEL} mx-auto mt-2 border border-foreground bg-surface px-4 py-2 text-foreground transition-colors duration-150 hover:bg-foreground hover:text-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground motion-reduce:transition-none`}
+            >
+              Show more · {ordered.length - limit} left
+            </button>
+          )}
+        </>
       )}
       {selected && (
         <DetailDrawer
