@@ -85,7 +85,7 @@ Update: scope (21 NTAs, short labels), Neighborhood rule, Summaries (no Haiku fa
 ## Phase B — frontend (only after you review Phase A)
 - **Neighborhood picker:** a searchable multi-select combobox that replaces the neighborhood chips in `web/components/FilterBar.tsx`. It reuses `Filters.neighborhoods` in `web/lib/filters.ts`, shows a count per neighborhood, and is keyboard-accessible (listbox pattern).
 - **Clustering:** add `@googlemaps/markerclusterer` in `web/components/CafeMap.tsx`, using the existing Advanced Markers and a custom renderer (amber fill, ink count). Clicking a cluster zooms in. Pin hover behaves as today.
-- **Pagination (done early, before Phase B):** `web/components/CafeBrowser.tsx` grid shows 24, then "Show more" (+24, same list grows). The count resets when filters, query, near-me or the view change. The map and "Surprise me" still use the full `visible` list.
+- **Pagination (done early, before Phase B):** `web/components/CafeBrowser.tsx` grid shows 20, then "Show more" (+20, same list grows). The count resets when filters, query, near-me or the view change. The map and "Surprise me" still use the full `visible` list.
 - **Payload check:** about 2k cafes in the RSC props. Measure the HTML size; consider trimming `opening_hours` later if it's large.
 - CLAUDE.md filter list: add the neighborhood picker.
 
