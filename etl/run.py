@@ -160,9 +160,11 @@ def report(i: int, n: int, query: str | None, row: dict, a: haiku.Analysis, meta
 
 
 def refresh_site(errors: list[str]) -> None:
-    """Ask the site to drop its cached cafe list now instead of waiting out the hourly ISR window."""
+    """Ask the site to drop its cached cafe list now instead of waiting out the hourly ISR window.
+    The default is the www host: the bare domain 308-redirects there and requests drops the
+    Authorization header on a cross-host redirect, which showed up as a 401."""
     secret = os.environ.get("REVALIDATE_SECRET")
-    url = os.environ.get("SITE_URL", "https://3rdplacenyc.com").rstrip("/") + "/api/revalidate"
+    url = os.environ.get("SITE_URL", "https://www.3rdplacenyc.com").rstrip("/") + "/api/revalidate"
     if not secret:
         print("site refresh: skipped (REVALIDATE_SECRET not set); new data shows within an hour")
         return

@@ -171,3 +171,18 @@ def test_existing_pages_past_the_1000_row_cap(monkeypatch):
     monkeypatch.setattr(store_mod.requests, "get", fake_get)
     got = store_mod.Store("https://x.supabase.co", "key").existing()
     assert len(got) == total and offsets == [0, 1000]
+
+
+def test_refresh_site_posts_to_www_with_bearer(monkeypatch):
+    seen = {}
+
+    class Resp:
+        ok, status_code = True, 200
+
+    monkeypatch.setenv("REVALIDATE_SECRET", "s3cret")
+    monkeypatch.delenv("SITE_URL", raising=False)
+    monkeypatch.setattr(run_mod.requests, "post", lambda url, headers, timeout: seen.update(url=url, h=headers) or Resp())
+    errors = []
+    run_mod.refresh_site(errors)
+    assert seen["url"] == "https://www.3rdplacenyc.com/api/revalidate" and seen["h"]["Authorization"] == "Bearer s3cret"
+    assert errors == []
