@@ -3,7 +3,7 @@
   python run.py --names "A,B,C"    Text Search over both neighborhoods (testing)
   python run.py --place-ids "X,Y"  Skip search, use exact Google place ids
   python run.py --all-existing     Place Details for every cafe already in the database
-  python run.py                    Nearby Search discovery over every target NTA (config.TARGET_NTAS)
+  python run.py                    Nearby Search discovery over config.ACTIVE_NTAS (or --neighborhoods)
 
 Discovery returns full places (one Nearby Search per circle, no Place Details); stored cafes
 that no search returned get a Place Details call. Every path then: classify -> upsert.
@@ -236,6 +236,9 @@ def main() -> int:
     ap.add_argument("--place-ids", help="comma-separated Google place ids; skips Text Search (use when a name is ambiguous)")
     ap.add_argument("--all-existing", action="store_true", help="re-run every cafe already in the database")
     ap.add_argument("--limit", type=int, help="process at most N targets (discovery: alphabetical by name)")
+    ap.add_argument("--neighborhoods", metavar="LIST",
+                    help="comma-separated NTA codes or labels to cover (default: config.ACTIVE_NTAS); "
+                         "limits discovery circles, stored-cafe re-checks and which cafes are kept")
     ap.add_argument("--if-stale-days", type=int, metavar="N",
                     help="exit 0 without Google calls unless the last successful etl_runs row is N or more days old")
     ap.add_argument("--max-calls", type=int, default=config.MAX_GOOGLE_CALLS,
@@ -244,6 +247,13 @@ def main() -> int:
     g.add_argument("--write", action="store_true", help="upsert to Supabase (default is dry-run)")
     g.add_argument("--dry-run", action="store_true", help="explicit dry-run (the default)")
     args = ap.parse_args()
+
+    try:
+        scope = config.resolve_ntas(args.neighborhoods.split(",")) if args.neighborhoods else config.ACTIVE_NTAS
+    except ValueError as e:
+        ap.error(str(e))
+    geo.set_scope(scope)
+    print("scope: " + ", ".join(config.TARGET_NTAS[c] for c in config.TARGET_NTAS if c in scope))
 
     config.load_env()
     needed = ["GOOGLE_PLACES_API_KEY", "SUPABASE_SERVICE_ROLE_KEY", "NEXT_PUBLIC_SUPABASE_URL"]

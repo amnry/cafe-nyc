@@ -7,15 +7,32 @@ from config import GRID_RADIUS_M, NTA_FILE, TARGET_NTAS
 M_PER_DEG_LAT = 111_320.0
 
 
+_scope: frozenset[str] | None = None  # None = every TARGET_NTAS entry
+
+
+def set_scope(codes) -> None:
+    """Restrict discovery, grid circles, neighborhood lookup and labels() to these NTA codes.
+    None restores all of TARGET_NTAS. A point in an NTA outside the scope has no neighborhood."""
+    global _scope
+    unknown = set(codes or ()) - set(TARGET_NTAS)
+    if unknown:
+        raise ValueError(f"not target NTAs: {sorted(unknown)}")
+    _scope = frozenset(codes) if codes is not None else None
+    neighborhoods.cache_clear()
+    _ring_boxes.cache_clear()
+
+
 @lru_cache(maxsize=1)
 def neighborhoods() -> tuple[tuple[str, tuple], ...]:
-    """(label, polygons) from the official NYC Open Data 2020 NTA boundaries.
+    """(label, polygons) of the in-scope NTAs from the official NYC Open Data 2020 boundaries.
 
     Each polygon is a list of rings (outer first, then holes); ring points are (lng, lat).
     """
     data = json.loads(NTA_FILE.read_text())
     out = []
     for f in data["features"]:
+        if _scope is not None and f["properties"]["nta2020"] not in _scope:
+            continue
         g = f["geometry"]
         polys = g["coordinates"] if g["type"] == "MultiPolygon" else [g["coordinates"]]
         out.append((TARGET_NTAS[f["properties"]["nta2020"]], tuple(tuple(tuple(r) for r in p) for p in polys)))

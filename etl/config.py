@@ -32,6 +32,31 @@ TARGET_NTAS = {
     "BK0202": "DUMBO",
     "QN0201": "Long Island City",
 }
+
+# NTAs that scheduled runs, and manual runs without --neighborhoods, cover. Stage 1: Manhattan only.
+# Stage 2 adds the five Brooklyn/Queens codes here.
+ACTIVE_NTAS = frozenset(code for code in TARGET_NTAS if code.startswith("MN"))
+
+
+def resolve_ntas(tokens: list[str]) -> frozenset[str]:
+    """Map NTA codes or short labels (case-insensitive) to codes. Unknown tokens raise ValueError."""
+    by_name = {**{c.lower(): c for c in TARGET_NTAS}, **{label.lower(): c for c, label in TARGET_NTAS.items()}}
+    codes, unknown = set(), []
+    for t in tokens:
+        t = t.strip()
+        if not t:
+            continue
+        if t.lower() in by_name:
+            codes.add(by_name[t.lower()])
+        else:
+            unknown.append(t)
+    if unknown:
+        raise ValueError(f"unknown neighborhood(s): {', '.join(unknown)}. Use NTA codes or labels from config.TARGET_NTAS")
+    if not codes:
+        raise ValueError("no neighborhoods given")
+    return frozenset(codes)
+
+
 NTA_FILE = Path(__file__).resolve().parent / "data" / "nta_targets.geojson"
 
 HAIKU_MODEL = "claude-haiku-4-5-20251001"
