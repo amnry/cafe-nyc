@@ -46,10 +46,10 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             if [ "${{ inputs.dry_run }}" = "true" ]; then
-              python etl/run.py --dry-run --max-calls 804
+              python etl/run.py --dry-run --max-calls 1200
             else
-              python etl/run.py --write --max-calls 804
+              python etl/run.py --write --max-calls 1200
             fi
           else
-            python etl/run.py --write --max-calls 804 --if-stale-days 23
+            python etl/run.py --write --max-calls 1200 --if-stale-days 23
           fi

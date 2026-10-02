@@ -47,7 +47,10 @@ def test_neighborhood_tagging_uses_nta_boundaries():
     assert geo.neighborhood_for(40.7143, -73.9614) == "Williamsburg"        # Bedford Ave
     assert geo.neighborhood_for(40.7447, -73.9485) == "Long Island City"    # Vernon Blvd
     assert geo.neighborhood_for(40.7712, -73.9742) is None                  # Central Park
-    assert geo.neighborhood_for(40.7736, -73.9566) is None                  # Upper East Side
+    assert geo.neighborhood_for(40.7736, -73.9566) == "Upper East Side"     # Lexington Ave, 70s
+    assert geo.neighborhood_for(40.8116, -73.9465) == "Harlem"              # Lenox Ave, 125th
+    assert geo.neighborhood_for(40.8417, -73.9394) == "Washington Heights"  # Broadway, 181st
+    assert geo.neighborhood_for(40.8800, -73.8800) is None                  # the Bronx
 
 
 def test_grid_covers_scope_and_is_sane():
@@ -84,7 +87,7 @@ def test_touches_scope():
     # Hudson River, ~300 m west of the West Village shoreline: only a big circle reaches land
     assert not geo.touches_scope(40.7340, -74.0150, 100)
     assert geo.touches_scope(40.7340, -74.0150, 600)
-    assert not geo.touches_scope(40.7850, -73.9700, 300)       # Central Park, far from scope
+    assert not geo.touches_scope(40.8800, -73.8800, 300)       # the Bronx, far from scope
 
 
 # --- --if-stale-days (schedule B) ---

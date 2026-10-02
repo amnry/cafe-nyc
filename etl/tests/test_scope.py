@@ -21,9 +21,16 @@ def reset_scope():
     geo.set_scope(None)
 
 
-def test_active_ntas_is_the_16_manhattan_codes():
-    assert len(config.ACTIVE_NTAS) == 16
+def test_active_ntas_is_every_manhattan_target():
+    assert len(config.ACTIVE_NTAS) == 32  # 16 below 59th St + 16 upper Manhattan
     assert all(c.startswith("MN") and c in config.TARGET_NTAS for c in config.ACTIVE_NTAS)
+    assert config.ACTIVE_NTAS == {c for c in config.TARGET_NTAS if c.startswith("MN")}
+    assert not any(c.startswith(("BK", "QN")) for c in config.ACTIVE_NTAS)  # Stage 2
+
+
+def test_shared_label_resolves_to_every_nta():
+    assert config.resolve_ntas(["harlem"]) == {"MN1001", "MN1002"}
+    assert config.resolve_ntas(["Upper West Side", "Inwood"]) == {"MN0701", "MN0702", "MN0703", "MN1203"}
 
 
 def test_resolve_ntas_accepts_codes_and_labels_case_insensitive():
@@ -44,7 +51,7 @@ def test_scope_limits_labels_lookup_and_circles():
     assert 0 < len(scoped) < len(all_circles)
     assert all(geo.touches_scope(a, b, r) for a, b, r in scoped)
     geo.set_scope(None)
-    assert len(geo.labels()) == 21
+    assert len(geo.labels()) == len(config.TARGET_NTAS)
 
 
 def test_manhattan_scope_has_no_brooklyn_or_queens_circles():

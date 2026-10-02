@@ -49,7 +49,7 @@ export function SourceNote() {
             : "translate-y-1 opacity-0 group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:translate-y-0 group-hover:opacity-100")
         }
       >
-        Places, hours and summaries from <span className="text-accent">Google Maps</span>, refreshed every two weeks.
+        Places, hours and summaries from <span className="text-accent">Google Maps</span>, refreshed about every 3-4 weeks.
       </span>
     </span>
   );

@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parent.parent
 # the site shows; West Village / Greenwich Village keep their v1 strings so existing rows are unchanged.
 # Regenerate the data file with scripts/fetch_ntas.py after editing this map.
 TARGET_NTAS = {
-    # Manhattan south of 59th St (MN0191 park/islands and MN0661 UN excluded)
+    # Manhattan south of 59th St (MN0191 Battery/islands and MN0661 UN excluded)
     "MN0101": "FiDi",
     "MN0102": "Tribeca",
     "MN0201": "SoHo",
@@ -25,6 +25,24 @@ TARGET_NTAS = {
     "MN0602": "Gramercy",
     "MN0603": "Murray Hill",
     "MN0604": "Turtle Bay",
+    # Upper Manhattan: several NTAs share one label so the picker shows the familiar neighborhood.
+    # (Roosevelt Island has no NTA of its own; it sits inside MN0801.)
+    "MN0701": "Upper West Side",
+    "MN0702": "Upper West Side",
+    "MN0703": "Upper West Side",
+    "MN0801": "Upper East Side",
+    "MN0802": "Upper East Side",
+    "MN0803": "Upper East Side",
+    "MN0901": "Morningside Heights",
+    "MN0902": "Manhattanville",
+    "MN0903": "Hamilton Heights",
+    "MN1001": "Harlem",
+    "MN1002": "Harlem",
+    "MN1101": "East Harlem",
+    "MN1102": "East Harlem",
+    "MN1201": "Washington Heights",
+    "MN1202": "Washington Heights",
+    "MN1203": "Inwood",
     # Brooklyn / Queens
     "BK0101": "Greenpoint",
     "BK0102": "Williamsburg",
@@ -33,21 +51,25 @@ TARGET_NTAS = {
     "QN0201": "Long Island City",
 }
 
-# NTAs that scheduled runs, and manual runs without --neighborhoods, cover. Stage 1: Manhattan only.
-# Stage 2 adds the five Brooklyn/Queens codes here.
+# NTAs that scheduled runs, and manual runs without --neighborhoods, cover: all of Manhattan from the
+# southern tip to Inwood (excluding parks, Randall's and the islands). Stage 2 adds the 5 Brooklyn/Queens codes.
 ACTIVE_NTAS = frozenset(code for code in TARGET_NTAS if code.startswith("MN"))
 
 
 def resolve_ntas(tokens: list[str]) -> frozenset[str]:
-    """Map NTA codes or short labels (case-insensitive) to codes. Unknown tokens raise ValueError."""
-    by_name = {**{c.lower(): c for c in TARGET_NTAS}, **{label.lower(): c for c, label in TARGET_NTAS.items()}}
+    """Map NTA codes or short labels (case-insensitive) to codes; a label shared by several NTAs
+    (e.g. "Harlem") gives all of them. Unknown tokens raise ValueError."""
+    by_name: dict[str, set[str]] = {}
+    for code, label in TARGET_NTAS.items():
+        by_name.setdefault(code.lower(), set()).add(code)
+        by_name.setdefault(label.lower(), set()).add(code)
     codes, unknown = set(), []
     for t in tokens:
         t = t.strip()
         if not t:
             continue
         if t.lower() in by_name:
-            codes.add(by_name[t.lower()])
+            codes |= by_name[t.lower()]
         else:
             unknown.append(t)
     if unknown:
@@ -78,7 +100,7 @@ NEARBY_MAX_RESULTS = 20  # Places Nearby Search hard cap per call
 
 # Abort a run once it has made this many Google HTTP requests (retries included).
 # Set from the reviewed expansion estimate (21 NTAs, ~1.5x the estimator's mid calls per refresh).
-MAX_GOOGLE_CALLS = 804
+MAX_GOOGLE_CALLS = 1200
 
 # Google Maps Platform list prices, 0-100k tier, USD per 1,000 billable events, with the free
 # events per SKU per calendar month. Checked 2026-10-01 at

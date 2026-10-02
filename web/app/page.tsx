@@ -26,10 +26,11 @@ export default async function Home() {
         </h1>
         <p className="mt-2 text-sm text-muted">not home, not the office, scouted cafes in NYC</p>
         <p className="mt-1 text-sm text-muted">
-          WiFi speeds are crowdsourced from people working there.{" "}
-          <a href="#faq" className="text-foreground underline decoration-1 underline-offset-4 hover:decoration-2">
-            How it works ↓
-          </a>
+          Real WiFi speeds, tested from the table. At a cafe?{" "}
+          <a href="#faq-wifi" className="text-foreground underline decoration-1 underline-offset-4 hover:decoration-2">
+            Test it
+          </a>{" "}
+          in 15 sec.
         </p>
       </header>
       <CafeBrowser
