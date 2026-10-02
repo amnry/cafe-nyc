@@ -140,3 +140,31 @@ def test_superset_scope_counts_and_expanding_active_ntas_invalidates_old_runs():
     stage2 = set(config.ACTIVE_NTAS) | {"BK0101", "BK0102", "BK0201", "BK0202", "QN0201"}
     assert run_mod.is_due([manhattan_only], 23, _NOW, required=stage2)  # Stage 2 forces a refresh
     assert not run_mod.is_due([everything], 23, _NOW, required=stage2)
+
+
+# --- Store.existing pages past PostgREST's 1000-row cap ---
+def test_existing_pages_past_the_1000_row_cap(monkeypatch):
+    import store as store_mod
+
+    total = 1343
+    offsets = []
+
+    class Resp:
+        ok = True
+
+        def __init__(self, rows):
+            self._rows = rows
+
+        def json(self):
+            return self._rows
+
+    def fake_get(url, params, headers, timeout):
+        off, lim = int(params["offset"]), int(params["limit"])
+        offsets.append(off)
+        n = min(lim, total - off)
+        return Resp([{"google_place_id": f"p{off + i}", "slug": "s", "neighborhood": "SoHo", "hidden_reason": None}
+                     for i in range(n)])
+
+    monkeypatch.setattr(store_mod.requests, "get", fake_get)
+    got = store_mod.Store("https://x.supabase.co", "key").existing()
+    assert len(got) == total and offsets == [0, 1000]

@@ -3,6 +3,9 @@ from datetime import datetime, timezone
 import requests
 
 
+PAGE = 1000  # Supabase max_rows
+
+
 class Store:
     """Supabase PostgREST access with the service role key (bypasses RLS)."""
 
@@ -21,10 +24,19 @@ class Store:
 
     def existing(self) -> dict[str, dict]:
         """place_id -> {slug, neighborhood, hidden_reason} for every stored cafe."""
-        r = self._check(requests.get(
-            f"{self.base}/cafes", params={"select": "google_place_id,slug,neighborhood,hidden_reason"},
-            headers=self._headers, timeout=30))
-        return {x.pop("google_place_id"): x for x in r.json()}
+        out: dict[str, dict] = {}
+        offset = 0
+        while True:  # PostgREST returns at most 1000 rows (max_rows) per request: page through
+            r = self._check(requests.get(
+                f"{self.base}/cafes",
+                params={"select": "google_place_id,slug,neighborhood,hidden_reason", "order": "google_place_id",
+                        "limit": str(PAGE), "offset": str(offset)},
+                headers=self._headers, timeout=30))
+            rows = r.json()
+            out.update({x.pop("google_place_id"): x for x in rows})
+            if len(rows) < PAGE:
+                return out
+            offset += PAGE
 
     def upsert_cafe(self, row: dict) -> str:
         """Upsert on google_place_id; columns absent from row (laptop_*, serves_food) are left

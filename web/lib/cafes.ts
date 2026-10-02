@@ -41,10 +41,14 @@ export const CAFES_TAG = "cafes";
 
 // Stable base order from the database; the default order is applied in getCafes
 // (Bayesian rating + completeness bonus, which needs the mean across all cafes).
-const ORDER = "rating.desc.nullslast,rating_count.desc.nullslast,name.asc";
+const ORDER = "rating.desc.nullslast,rating_count.desc.nullslast,name.asc,id.asc"; // id: stable paging
+// PostgREST returns at most this many rows per request (supabase max_rows); getCafes pages through.
+export const PAGE_ROWS = 1000;
 
-export function cafesUrl(baseUrl: string): string {
-  const params = new URLSearchParams({ select: CAFE_COLUMNS.join(","), order: ORDER });
+export function cafesUrl(baseUrl: string, offset = 0): string {
+  const params = new URLSearchParams({
+    select: CAFE_COLUMNS.join(","), order: ORDER, limit: String(PAGE_ROWS), offset: String(offset),
+  });
   return `${baseUrl.replace(/\/$/, "")}/rest/v1/cafes_public?${params}`;
 }
 
@@ -59,14 +63,21 @@ export async function getCafes(): Promise<CafesResult> {
   if (!url || !key) {
     throw new Error("NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be set");
   }
-  const res = await fetch(cafesUrl(url), {
-    headers: { apikey: key },
-    next: { revalidate: REVALIDATE_SECONDS, tags: [CAFES_TAG] },
-  });
-  if (!res.ok) {
-    throw new Error(`cafes_public fetch failed: HTTP ${res.status}`);
+  const all: Cafe[] = [];
+  let date = NaN;
+  for (let offset = 0; ; offset += PAGE_ROWS) {
+    const res = await fetch(cafesUrl(url, offset), {
+      headers: { apikey: key },
+      next: { revalidate: REVALIDATE_SECONDS, tags: [CAFES_TAG] },
+    });
+    if (!res.ok) {
+      throw new Error(`cafes_public fetch failed: HTTP ${res.status}`);
+    }
+    if (offset === 0) date = Date.parse(res.headers.get("date") ?? "");
+    const rows = (await res.json()) as Cafe[];
+    all.push(...rows);
+    if (rows.length < PAGE_ROWS) break;
   }
-  const cafes = sortByRank((await res.json()) as Cafe[]);
-  const date = Date.parse(res.headers.get("date") ?? "");
+  const cafes = sortByRank(all);
   return { cafes, fetchedAt: Number.isNaN(date) ? Date.now() : date };
 }
