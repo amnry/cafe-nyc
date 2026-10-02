@@ -20,11 +20,11 @@ class Store:
         return r
 
     def existing(self) -> dict[str, dict]:
-        """place_id -> {slug, hidden_reason} for every stored cafe."""
+        """place_id -> {slug, neighborhood, hidden_reason} for every stored cafe."""
         r = self._check(requests.get(
-            f"{self.base}/cafes", params={"select": "google_place_id,slug,hidden_reason"},
+            f"{self.base}/cafes", params={"select": "google_place_id,slug,neighborhood,hidden_reason"},
             headers=self._headers, timeout=30))
-        return {x["google_place_id"]: {"slug": x["slug"], "hidden_reason": x["hidden_reason"]} for x in r.json()}
+        return {x.pop("google_place_id"): x for x in r.json()}
 
     def upsert_cafe(self, row: dict) -> str:
         """Upsert on google_place_id; columns absent from row (laptop_*, serves_food) are left

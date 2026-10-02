@@ -1,10 +1,10 @@
 # Project: remote-work cafe directory (NYC)
 Production: https://3rdplacenyc.com (Vercel, root directory `web`; cafe-nyc.vercel.app is the Vercel alias).
-Directory of cafes for remote workers. V1 = West Village + Greenwich Village (official NYC NTA boundaries), ~100-150 cafes.
+Directory of cafes for remote workers. Scope: 21 official NYC 2020 NTAs (Manhattan south of 59th St + Greenpoint, Williamsburg, Brooklyn Heights, DUMBO/Downtown BK, Long Island City), listed in etl/config.py TARGET_NTAS. Expansion plan: docs/expansion-plan.md (expanded data must not be written to production before the Phase B frontend ships).
 Users filter cafes here, then click through to Google Maps. That's the whole product.
 
 ## Structure
-- /etl: Python. Pulls Google Places + cafe websites, Haiku fallback summary only, upserts to Supabase.
+- /etl: Python. Nearby Search (New) discovery with the full field mask + adaptive subdivision, Place Details only for stored cafes no search returned; upserts to Supabase. estimate.py = zero-cost dry run (no Google/Anthropic calls). --max-calls caps Google requests.
 - /web: Next.js (App Router, TypeScript, Tailwind). Reads from Supabase.
 - /supabase/migrations: all schema changes as SQL migrations.
 
@@ -18,10 +18,10 @@ Users filter cafes here, then click through to Google Maps. That's the whole pro
 - Header: line under the tagline "WiFi speeds are crowdsourced from people working there. How it works ↓" and a small muted "FAQ" link top right, both jumping to the FAQ at the bottom of the page (web/components/Faq.tsx). FAQ is plain-language, business tone (no internal thresholds or anti-abuse details); every claim must stay true to the WiFi spec.
 - Laptop data is not shown anywhere in v1. The laptop* DB columns stay (no migration) but the ETL does not fill them and the site must not read them.
 - Prices are not shown or read anywhere in v1. The menu_prices table and cafes_public.prices / latte_price_cents stay (no migration); the ETL's website fetch + price extraction is behind `--with-websites`, off by default. The web app must not read prices, latte_price_cents, or laptop.
-- Summaries: only Google's (generative/editorial) are shown. Haiku fallbacks are generated from reviews only (never restating restroom/dogs/outdoor/wine, null if unsupported) but hidden on the site.
+- Summaries: only Google's (generative/editorial). No fallback summary; the ETL no longer calls Haiku for summaries (Haiku only extracts prices behind --with-websites). Old 'haiku' rows are cleared on the next refresh.
 - Exclusions: cafes.hidden (filtered out of cafes_public). hidden_reason 'auto: ...' is set/cleared by the ETL (name contains "access required", primaryType restaurant/bar, summary says takeout-only, fewer than 5 reviews, no opening hours); 'manual: ...' is set by hand and the ETL never overrides it.
 - Address line on the site = cafes.street_address (street number + route from addressComponents).
-- Neighborhood = whichever NTA polygon (West Village or Greenwich Village) contains the cafe; boundaries in /etl/data. Cafes outside both are skipped.
+- Neighborhood = short label (etl/config.py TARGET_NTAS) of whichever target NTA polygon contains the cafe; boundaries in etl/data/nta_targets.geojson (regenerate with etl/scripts/fetch_ntas.py). Cafes outside all of them are skipped.
 - Theme: one look on every device (no prefers-color-scheme), from the share image: amber #ffb224 page, receipt-paper cards (#fbfaf6), ink #1a1203; amber is a fill, never text on paper. Grid view default; map (Google Maps JS) lazy-loaded only when user opens it; hovering a pin with a mouse shows that cafe's card (amber-tinted). View lives in the URL (?view=map). Base map is visually muted; pins carry the color. Key: NEXT_GOOGLE_MAPS_API_KEY (passed from the server; must be HTTP-referrer restricted).
 - Default order: Bayesian average rating, (v/(v+m))*R + (m/(v+m))*C with m=50, C=mean rating, v=review count, plus COMPLETENESS_WEIGHT (0.3) * completeness, where completeness = (non-null restroom, dogs, outdoor + 1 if a Google summary is shown) / 4. "Near me" sorts by distance with "N min walk" (~80 m/min); on by default only if geolocation permission was already granted. Near-me location stays in browser memory: never sent, logged, or stored. The only exception is the WiFi speed test: location is sent once, to /api/speedtest/start, when the user taps Test; it is used for the geofence and discarded, and only distance_m and accuracy_m are stored.
 - All times computed in America/New_York.
@@ -31,4 +31,4 @@ Users filter cafes here, then click through to Google Maps. That's the whole pro
 - Secrets live in .env files, never committed.
 
 ## Out of scope for v1
-Menu prices (ETL code kept behind a flag), laptop policy (returns later), share button, laptop time-limit policies, other neighborhoods, serves_food extraction.
+Menu prices (ETL code kept behind a flag), laptop policy (returns later), share button, laptop time-limit policies, neighborhoods beyond TARGET_NTAS, serves_food extraction.

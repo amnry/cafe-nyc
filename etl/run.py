@@ -2,11 +2,15 @@
 
   python run.py --names "A,B,C"    Text Search over both neighborhoods (testing)
   python run.py --place-ids "X,Y"  Skip search, use exact Google place ids
-  python run.py                    Nearby Search grid discovery over West Village + Greenwich Village
+  python run.py --all-existing     Place Details for every cafe already in the database
+  python run.py                    Nearby Search discovery over every target NTA (config.TARGET_NTAS)
 
-Both feed the same pipeline: place details -> Haiku (fallback summary) -> upsert.
-Website fetching and price extraction are off; enable with --with-websites.
-Dry-run is the default; nothing is written to Supabase without --write.
+Discovery returns full places (one Nearby Search per circle, no Place Details); stored cafes
+that no search returned get a Place Details call. Every path then: classify -> upsert.
+Website fetching and price extraction (Haiku) are off; enable with --with-websites.
+Dry-run is the default; nothing is written to Supabase without --write. A dry run still
+makes Google calls; for a cost estimate with no paid calls use estimate.py.
+--max-calls caps Google HTTP requests (default config.MAX_GOOGLE_CALLS); the run aborts past it.
 """
 import argparse
 import os
@@ -14,7 +18,6 @@ import sys
 from urllib.parse import urlparse
 from datetime import datetime, timezone
 
-import anthropic
 import requests
 
 import config
@@ -22,26 +25,25 @@ import geo
 import haiku
 from address import street_line
 from classify import auto_hide_reason, is_unclear_name, lookalike_flags
-from config import CAFE_PRIMARY_TYPES, SUMMARY_EDITORIAL, SUMMARY_GENERATIVE, SUMMARY_HAIKU
-from places import PRICE_LEVELS, Places, discover
+from config import CAFE_PRIMARY_TYPES, SUMMARY_EDITORIAL, SUMMARY_GENERATIVE
+from places import PRICE_LEVELS, CallBudgetExceeded, Places, discover, google_summaries
 from slug import build_slug, slugify
 from stats import Stats
 from store import Store
 from website import fetch_site
 
 
-def pick_summary(place: dict, analysis: haiku.Analysis) -> tuple[str | None, str | None]:
-    s = haiku.google_summaries(place)
+def pick_summary(place: dict) -> tuple[str | None, str | None]:
+    """Google's summaries only. No fallback: a cafe without one has no summary."""
+    s = google_summaries(place)
     if s["generative"]:
         return s["generative"], SUMMARY_GENERATIVE
     if s["editorial"]:
         return s["editorial"], SUMMARY_EDITORIAL
-    if analysis.summary:
-        return analysis.summary, SUMMARY_HAIKU
     return None, None
 
 
-def build_row(place: dict, analysis: haiku.Analysis, summary, source, neighborhood: str) -> dict:
+def build_row(place: dict, summary, source, neighborhood: str) -> dict:
     loc = place.get("location") or {}
     return {
         "google_place_id": place["id"],
@@ -84,10 +86,10 @@ class OutOfScope(Exception):
     pass
 
 
-def process(place_id: str, places: Places, client, stats: Stats, existing: dict, taken: set,
-            with_websites: bool = False):
-    """Shared pipeline. Returns (row, prices, analysis, meta) for report/upsert."""
-    place = places.details(place_id)
+def process(place: dict, client, stats: Stats, existing: dict, taken: set, with_websites: bool = False):
+    """Shared pipeline over a full place (from discovery or Place Details).
+    Returns (row, analysis, meta) for report/upsert. client is only used with with_websites."""
+    place_id = place["id"]
     if is_unclear_name((place.get("displayName") or {}).get("text"), place.get("formattedAddress")):
         raise OutOfScope(f"{place_id} | {place.get('formattedAddress')} has an unclear name "
                          f"{(place.get('displayName') or {}).get('text')!r}")
@@ -95,13 +97,11 @@ def process(place_id: str, places: Places, client, stats: Stats, existing: dict,
     neighborhood = geo.neighborhood_for(loc.get("latitude", 0), loc.get("longitude", 0))
     if neighborhood is None:
         raise OutOfScope(f"{place['displayName']['text']} | {place.get('formattedAddress')} is outside "
-                         "West Village / Greenwich Village NTAs")
+                         "the target NTAs")
     pages = fetch_site(place.get("websiteUri"), stats) if with_websites else []
-    g = haiku.google_summaries(place)
-    analysis = haiku.analyze(client, stats, place, pages, need_summary=not (g["generative"] or g["editorial"]),
-                             extract_prices=with_websites)
-    summary, source = pick_summary(place, analysis)
-    row = build_row(place, analysis, summary, source, neighborhood)
+    analysis = haiku.extract_prices(client, stats, place, pages) if with_websites else haiku.Analysis()
+    summary, source = pick_summary(place)
+    row = build_row(place, summary, source, neighborhood)
 
     is_new = place_id not in existing
     if is_new:
@@ -115,7 +115,7 @@ def process(place_id: str, places: Places, client, stats: Stats, existing: dict,
 
     # Visibility. A manual decision (hidden_reason 'manual: ...') is never overridden.
     stored_reason = (existing.get(place_id) or {}).get("hidden_reason") or ""
-    g = haiku.google_summaries(place)
+    g = google_summaries(place)
     auto = auto_hide_reason(
         row["name"], place.get("primaryType"), [g["generative"], g["editorial"], row["ai_summary"]],
         review_count=row["rating_count"] or 0, has_hours=bool(row["opening_hours"]),
@@ -154,7 +154,7 @@ def report(i: int, n: int, query: str | None, row: dict, a: haiku.Analysis, meta
             print("  prices:   none found")
         chars = sum(len(p.text) for p in meta["pages"])
         print(f"  website:  {len(meta['pages'])} page(s), {chars:,} chars")
-    print(f"  summary:  source={row['ai_summary_source']}" + (f"  \"{row['ai_summary']}\"" if row["ai_summary_source"] == "haiku" else ""))
+    print(f"  summary:  source={row['ai_summary_source']}")
     for f in a.flags:
         print(f"  flag:     {f}")
 
@@ -176,6 +176,40 @@ def refresh_site(errors: list[str]) -> None:
         errors.append(f"site refresh failed: {type(e).__name__}")
 
 
+def discovery_targets(places: Places, existing: dict, errors: list[str]) -> tuple[list[str], dict[str, dict]]:
+    """Nearby Search over every target NTA. Returns (place ids to process, prefetched places).
+
+    Targets = discovered cafes that pass the cheap filters, plus every stored cafe in scope,
+    so stored cafes are re-checked (closed, retyped, renamed). Stored cafes the search did
+    not return are not prefetched and get a Place Details call in the main loop."""
+    circles = geo.grid_circles()
+    print(f"discovery: {len(circles)} coarse circles of {config.GRID_RADIUS_M} m")
+    d = discover(places, circles)
+    print("discovery: calls by depth: " + ", ".join(f"{k}={v}" for k, v in sorted(d.calls_by_depth.items())))
+    for lat, lng, r in d.saturated_leaves:
+        errors.append(f"warning: circle at {lat:.5f},{lng:.5f} r={r:.0f} m still returned 20 at the size floor")
+    outside = wrong_type = junk = 0
+    kept = []
+    for pid, p in d.places.items():
+        loc = p.get("location") or {}
+        if not geo.neighborhood_for(loc.get("latitude", 0), loc.get("longitude", 0)):
+            outside += 1
+        elif p.get("primaryType") not in CAFE_PRIMARY_TYPES:
+            wrong_type += 1
+        elif is_unclear_name((p.get("displayName") or {}).get("text"), p.get("formattedAddress")):
+            junk += 1
+        else:
+            kept.append(((p.get("displayName") or {}).get("text", ""), pid))
+    in_scope = set(geo.labels())
+    stored = sorted(pid for pid, e in existing.items() if e.get("neighborhood") in in_scope)
+    kept_ids = {pid for _, pid in kept}
+    unseen = [pid for pid in stored if pid not in d.places]
+    print(f"discovery: {len(d.places)} unique places; {outside} outside NTAs, {wrong_type} wrong primaryType, "
+          f"{junk} unclear names, {len(kept)} kept; {len(unseen)} stored cafes not found (Place Details)")
+    targets = [pid for _, pid in sorted(kept)] + [pid for pid in stored if pid not in kept_ids]
+    return targets, d.places
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--names", help='comma-separated cafe names, e.g. "A,B,C"')
@@ -184,24 +218,45 @@ def main() -> int:
     ap.add_argument("--place-ids", help="comma-separated Google place ids; skips Text Search (use when a name is ambiguous)")
     ap.add_argument("--all-existing", action="store_true", help="re-run every cafe already in the database")
     ap.add_argument("--limit", type=int, help="process at most N targets (discovery: alphabetical by name)")
+    ap.add_argument("--max-calls", type=int, default=config.MAX_GOOGLE_CALLS,
+                    help=f"abort once this many Google requests were made (default {config.MAX_GOOGLE_CALLS})")
     g = ap.add_mutually_exclusive_group()
     g.add_argument("--write", action="store_true", help="upsert to Supabase (default is dry-run)")
     g.add_argument("--dry-run", action="store_true", help="explicit dry-run (the default)")
     args = ap.parse_args()
 
     config.load_env()
-    env = config.require_env("GOOGLE_PLACES_API_KEY", "ANTHROPIC_API_KEY",
-                             "SUPABASE_SERVICE_ROLE_KEY", "NEXT_PUBLIC_SUPABASE_URL")
+    needed = ["GOOGLE_PLACES_API_KEY", "SUPABASE_SERVICE_ROLE_KEY", "NEXT_PUBLIC_SUPABASE_URL"]
+    if args.with_websites:
+        needed.append("ANTHROPIC_API_KEY")  # Haiku is used only for price extraction
+    env = config.require_env(*needed)
     stats = Stats()
-    places = Places(env["GOOGLE_PLACES_API_KEY"], stats)
-    client = anthropic.Anthropic(api_key=env["ANTHROPIC_API_KEY"])
+    places = Places(env["GOOGLE_PLACES_API_KEY"], stats, max_calls=args.max_calls)
+    client = None
+    if args.with_websites:
+        import anthropic
+        client = anthropic.Anthropic(api_key=env["ANTHROPIC_API_KEY"])
     store = Store(env["NEXT_PUBLIC_SUPABASE_URL"], env["SUPABASE_SERVICE_ROLE_KEY"])
     existing = store.existing()
     taken = {e["slug"] for e in existing.values()}
-
-    # Resolve targets: list of (query or None, place_id)
-    targets: list[tuple[str | None, str]] = []
     errors: list[str] = []
+    run_id = store.start_run() if args.write else None
+    try:
+        return _run(args, env, stats, places, client, store, existing, taken, errors, run_id)
+    except CallBudgetExceeded as e:
+        errors.append(f"aborted: {e}")
+        print(f"\nABORTED: {e}. Raise --max-calls only after checking the estimate (estimate.py).")
+        if run_id:
+            store.finish_run(run_id, stats.cafes_processed, errors)
+            if stats.cafes_processed:
+                refresh_site(errors)
+        return 1
+
+
+def _run(args, env, stats, places, client, store, existing, taken, errors, run_id) -> int:
+    # Resolve targets: (query or None, place_id); prefetched places skip Place Details.
+    targets: list[tuple[str | None, str]] = []
+    prefetched: dict[str, dict] = {}
     if args.all_existing:
         targets = [(None, pid) for pid in sorted(existing)]
     elif args.place_ids:
@@ -218,42 +273,30 @@ def main() -> int:
             if others:
                 print(f"note: {name!r} other candidates: " + " || ".join(others))
     else:
-        circles = geo.grid_circles()
-        print(f"discovery: {len(circles)} circles of {config.GRID_RADIUS_M} m")
-        found = discover(places, circles)
-        outside = wrong_type = junk = 0
-        kept = []
-        for pid, p in found.items():
-            loc = p.get("location") or {}
-            if not geo.neighborhood_for(loc.get("latitude", 0), loc.get("longitude", 0)):
-                outside += 1
-            elif p.get("primaryType") not in CAFE_PRIMARY_TYPES:
-                wrong_type += 1
-            elif is_unclear_name((p.get("displayName") or {}).get("text"), p.get("formattedAddress")):
-                junk += 1
-            else:
-                kept.append(((p.get("displayName") or {}).get("text", ""), pid))
-        targets = [(None, pid) for _, pid in sorted(kept)]
-        print(f"discovery: {len(found)} unique places; {outside} outside NTAs, {wrong_type} wrong primaryType, "
-              f"{junk} unclear names, {len(targets)} kept")
+        ids, prefetched = discovery_targets(places, existing, errors)
+        targets = [(None, pid) for pid in ids]
     if args.limit is not None:
         targets = targets[: args.limit]
 
     mode = f"WRITE to {urlparse(env['NEXT_PUBLIC_SUPABASE_URL']).hostname}" if args.write else "DRY RUN (no writes)"
     print(f"\n=== {mode}: {len(targets)} cafe(s) ===")
-    run_id = store.start_run() if args.write else None
     processed = 0
     done: list[tuple[dict, dict]] = []  # (row, meta) for the summary table
     for i, (query, pid) in enumerate(targets, 1):
         try:
-            row, analysis, meta = process(pid, places, client, stats, existing, taken, args.with_websites)
+            place = prefetched.get(pid) or places.details(pid)
+            row, analysis, meta = process(place, client, stats, existing, taken, args.with_websites)
             report(i, len(targets), query, row, analysis, meta)
             if args.write:
                 cafe_id = store.upsert_cafe(row)
                 store.upsert_prices(cafe_id, analysis.prices)
-                existing[pid] = {"slug": meta["slug"], "hidden_reason": row.get("hidden_reason", existing.get(pid, {}).get("hidden_reason"))}
+                existing[pid] = {"slug": meta["slug"], "neighborhood": row["neighborhood"],
+                                 "hidden_reason": row.get("hidden_reason", existing.get(pid, {}).get("hidden_reason"))}
             processed += 1
+            stats.cafes_processed = processed
             done.append((row, meta))
+        except CallBudgetExceeded:
+            raise
         except OutOfScope as e:
             errors.append(f"skipped: {e}")
             print(f"\n[{i}/{len(targets)}] SKIPPED {e}")
@@ -286,6 +329,7 @@ def main() -> int:
     print("by neighborhood: " + (", ".join(f"{k}={v}" for k, v in sorted(hoods.items())) or "none"))
     print(f"cafes processed: {processed}/{len(targets)}  errors: {len(errors)}")
     print(f"Google calls:    {stats.google_total}  ({', '.join(f'{k}={v}' for k, v in sorted(stats.google.items()))})")
+    print(f"Google cap:      {args.max_calls}")
     print(f"Anthropic calls: {stats.anthropic_calls}  (in={stats.input_tokens:,} tok, out={stats.output_tokens:,} tok)")
     print(f"Website fetches: {stats.web_fetches}")
     if not args.write:

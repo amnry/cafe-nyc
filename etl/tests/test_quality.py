@@ -5,7 +5,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from address import street_line
 from classify import auto_hide_reason
-from haiku import check_summary, copies_review
 
 
 def comp(*pairs):
@@ -42,13 +41,3 @@ def test_auto_hide_few_reviews_or_no_hours():
     assert auto_hide_reason("X", "cafe", [], review_count=1, has_hours=False) == "auto: fewer than 5 reviews"
     # earlier rules still win
     assert auto_hide_reason("X", "wine_bar", [], review_count=1) == "auto: primaryType wine_bar"
-
-
-def test_check_summary():
-    reviews = ["The staff were lovely and the cortado was the best I have had in the city"]
-    assert check_summary("", reviews) == (None, None)
-    assert check_summary("Cozy spot, and the restroom is clean.", reviews)[0] is None
-    assert check_summary("Dog friendly corner cafe.", reviews)[0] is None
-    assert check_summary("Friendly staff and a cortado that regulars rave about.", reviews) == (
-        "Friendly staff and a cortado that regulars rave about.", None)
-    assert copies_review("they said the cortado was the best I have had", reviews)
