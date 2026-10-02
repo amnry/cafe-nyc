@@ -56,3 +56,12 @@ class Store:
             f"{self.base}/etl_runs", params={"id": f"eq.{run_id}"}, headers=self._headers,
             json={"finished_at": datetime.now(timezone.utc).isoformat(),
                   "cafes_processed": processed, "errors": errors}, timeout=30))
+
+    def recent_runs(self, limit: int = 20) -> list[dict]:
+        """Newest finished etl_runs rows first: finished_at, cafes_processed, errors."""
+        r = self._check(requests.get(
+            f"{self.base}/etl_runs",
+            params={"select": "finished_at,cafes_processed,errors", "finished_at": "not.is.null",
+                    "order": "finished_at.desc", "limit": str(limit)},
+            headers=self._headers, timeout=30))
+        return r.json()

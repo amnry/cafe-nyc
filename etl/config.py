@@ -52,8 +52,8 @@ MIN_RADIUS_M = 50  # subdivision floor; a circle this small still at the cap is 
 NEARBY_MAX_RESULTS = 20  # Places Nearby Search hard cap per call
 
 # Abort a run once it has made this many Google HTTP requests (retries included).
-# WV/GV scale until the expansion estimate is reviewed; then 1.5x the estimator's mid figure.
-MAX_GOOGLE_CALLS = 400
+# Set from the reviewed expansion estimate (21 NTAs, ~1.5x the estimator's mid calls per refresh).
+MAX_GOOGLE_CALLS = 804
 
 # Google Maps Platform list prices, 0-100k tier, USD per 1,000 billable events, with the free
 # events per SKU per calendar month. Checked 2026-10-01 at

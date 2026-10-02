@@ -1,10 +1,11 @@
 name: ETL
 
-# Biweekly refresh: Google data must not be older than 30 days (cafes_public.is_fresh).
-# GitHub cron has no "every 14 days", so run on the 1st and 15th.
+# Google data must not be older than 30 days (cafes_public.is_fresh). Check every Monday; run.py
+# --if-stale-days 23 exits without Google calls unless the last successful etl_runs row is 23+ days
+# old, so a refresh happens about every 3-4 weeks and data stays under 30 days (23 + up to 7 waiting).
 on:
   schedule:
-    - cron: "0 9 1,15 * *"
+    - cron: "0 9 * * 1"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -25,7 +26,6 @@ jobs:
     timeout-minutes: 60
     env:
       GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
@@ -39,11 +39,17 @@ jobs:
       - run: pip install -r etl/requirements.txt
       - name: Tests
         run: python -m pytest etl/tests
-      - name: Refresh existing cafes
-        # Scheduled runs always write; manual runs write only when dry_run is unchecked.
+      - name: Refresh cafes (Nearby Search discovery)
+        # Scheduled runs write, but only when the last successful run is 23+ days old.
+        # Manual runs skip that check; they write only when dry_run is unchecked.
+        # ANTHROPIC_API_KEY is not set: only --with-websites (off) needs it.
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then
-            python etl/run.py --all-existing --dry-run
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ inputs.dry_run }}" = "true" ]; then
+              python etl/run.py --dry-run --max-calls 804
+            else
+              python etl/run.py --write --max-calls 804
+            fi
           else
-            python etl/run.py --all-existing --write
+            python etl/run.py --write --max-calls 804 --if-stale-days 23
           fi

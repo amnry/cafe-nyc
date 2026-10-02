@@ -210,6 +210,24 @@ def discovery_targets(places: Places, existing: dict, errors: list[str]) -> tupl
     return targets, d.places
 
 
+def last_success(runs: list[dict]) -> datetime | None:
+    """finished_at of the newest successful run. Successful = finished, processed at least one cafe,
+    and no "aborted:" error. Per-cafe "skipped:" / "warning:" / ERROR entries are normal and do not count."""
+    for r in sorted(runs, key=lambda r: r["finished_at"], reverse=True):
+        if not r.get("finished_at") or not r.get("cafes_processed"):
+            continue
+        if any(str(e).startswith("aborted:") for e in (r.get("errors") or [])):
+            continue
+        return datetime.fromisoformat(r["finished_at"].replace("Z", "+00:00"))
+    return None
+
+
+def is_due(runs: list[dict], stale_days: int, now: datetime) -> bool:
+    """True when there is no successful run, or the last one finished stale_days or more ago."""
+    last = last_success(runs)
+    return last is None or (now - last).total_seconds() >= stale_days * 86400
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--names", help='comma-separated cafe names, e.g. "A,B,C"')
@@ -218,6 +236,8 @@ def main() -> int:
     ap.add_argument("--place-ids", help="comma-separated Google place ids; skips Text Search (use when a name is ambiguous)")
     ap.add_argument("--all-existing", action="store_true", help="re-run every cafe already in the database")
     ap.add_argument("--limit", type=int, help="process at most N targets (discovery: alphabetical by name)")
+    ap.add_argument("--if-stale-days", type=int, metavar="N",
+                    help="exit 0 without Google calls unless the last successful etl_runs row is N or more days old")
     ap.add_argument("--max-calls", type=int, default=config.MAX_GOOGLE_CALLS,
                     help=f"abort once this many Google requests were made (default {config.MAX_GOOGLE_CALLS})")
     g = ap.add_mutually_exclusive_group()
@@ -237,6 +257,13 @@ def main() -> int:
         import anthropic
         client = anthropic.Anthropic(api_key=env["ANTHROPIC_API_KEY"])
     store = Store(env["NEXT_PUBLIC_SUPABASE_URL"], env["SUPABASE_SERVICE_ROLE_KEY"])
+    if args.if_stale_days is not None:
+        runs = store.recent_runs()
+        last = last_success(runs)
+        if not is_due(runs, args.if_stale_days, datetime.now(timezone.utc)):
+            print(f"skip: last successful run finished {last:%Y-%m-%d %H:%M} UTC, under {args.if_stale_days} days ago")
+            return 0
+        print(f"due: last successful run {last:%Y-%m-%d} UTC" if last else "due: no successful run on record")
     existing = store.existing()
     taken = {e["slug"] for e in existing.values()}
     errors: list[str] = []

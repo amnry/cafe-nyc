@@ -85,3 +85,32 @@ def test_touches_scope():
     assert not geo.touches_scope(40.7340, -74.0150, 100)
     assert geo.touches_scope(40.7340, -74.0150, 600)
     assert not geo.touches_scope(40.7850, -73.9700, 300)       # Central Park, far from scope
+
+
+# --- --if-stale-days (schedule B) ---
+from datetime import datetime, timedelta, timezone  # noqa: E402
+
+import run as run_mod  # noqa: E402
+
+_NOW = datetime(2026, 11, 2, 9, 0, tzinfo=timezone.utc)
+
+
+def _run_row(days_ago, processed=100, errors=()):
+    return {"finished_at": (_NOW - timedelta(days=days_ago)).isoformat(), "cafes_processed": processed,
+            "errors": list(errors)}
+
+
+def test_due_when_no_runs():
+    assert run_mod.is_due([], 23, _NOW)
+
+
+def test_not_due_under_23_days_due_at_23():
+    assert not run_mod.is_due([_run_row(22.9)], 23, _NOW)
+    assert run_mod.is_due([_run_row(23)], 23, _NOW)
+
+
+def test_aborted_and_empty_runs_do_not_count_but_skipped_does():
+    runs = [_run_row(1, errors=["aborted: call budget"]), _run_row(2, processed=0), _run_row(3, errors=["skipped: out of scope", "warning: x"])]
+    assert run_mod.last_success(runs) == _NOW - timedelta(days=3)
+    assert not run_mod.is_due(runs, 23, _NOW)
+    assert run_mod.is_due(runs[:2], 23, _NOW)  # only failed runs: due
