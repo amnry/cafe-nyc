@@ -6,6 +6,7 @@ import type { GeoStatus } from "@/lib/useGeolocation";
 import type { View } from "@/lib/useView";
 import { AttrGlyph } from "./AttrIcon";
 import { MONO_LABEL } from "./bits";
+import { NeighborhoodPicker } from "./NeighborhoodPicker";
 
 /** A tray of segments. Groups related filters; slightly rounded, not pills. */
 function Segment({ label, children }: { label: string; children: React.ReactNode }) {
@@ -41,18 +42,11 @@ function Chip({ pressed, onClick, children, label }: {
 }
 
 export function FilterBar({ filters, onChange, neighborhoods, shown, total, onSurprise, view, onViewChange, nearMe, onNearMe }: {
-  filters: Filters; onChange: (f: Filters) => void; neighborhoods: string[]; shown: number; total: number;
+  filters: Filters; onChange: (f: Filters) => void; neighborhoods: { name: string; count: number }[]; shown: number; total: number;
   onSurprise: () => void;
   view: View; onViewChange: (v: View) => void;
   nearMe: GeoStatus; onNearMe: () => void;
 }) {
-  const toggleNeighborhood = (name: string) =>
-    onChange({
-      ...filters,
-      neighborhoods: filters.neighborhoods.includes(name)
-        ? filters.neighborhoods.filter((n) => n !== name)
-        : [...filters.neighborhoods, name],
-    });
   const togglePrice = (tier: number) =>
     onChange({
       ...filters,
@@ -62,13 +56,11 @@ export function FilterBar({ filters, onChange, neighborhoods, shown, total, onSu
   return (
     <div className="flex flex-col gap-3 border-y border-line py-3 sm:flex-row sm:items-center">
       <div className="flex flex-wrap items-center gap-2">
-        <Segment label="Neighborhood">
-          {neighborhoods.map((name) => (
-            <Chip key={name} pressed={filters.neighborhoods.includes(name)} onClick={() => toggleNeighborhood(name)}>
-              {name}
-            </Chip>
-          ))}
-        </Segment>
+        <NeighborhoodPicker
+          options={neighborhoods}
+          selected={filters.neighborhoods}
+          onChange={(next) => onChange({ ...filters, neighborhoods: next })}
+        />
         <Segment label="Amenities">
           <Chip pressed={filters.openNow} onClick={() => onChange({ ...filters, openNow: !filters.openNow })}>Open now</Chip>
           <Chip pressed={filters.restroom} onClick={() => onChange({ ...filters, restroom: !filters.restroom })}>

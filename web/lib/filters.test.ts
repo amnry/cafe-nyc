@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeFilterCount, applyFilters, DEFAULT_FILTERS, priceTier } from "./filters";
+import { activeFilterCount, applyFilters, DEFAULT_FILTERS, matchNeighborhoods, neighborhoodCounts, priceTier } from "./filters";
 import type { Cafe } from "./types";
 
 const base: Cafe = {
@@ -72,5 +72,25 @@ describe("helpers", () => {
   });
   it("activeFilterCount", () => {
     expect(activeFilterCount({ restroom: true, dogs: false, openNow: true, prices: [1, 2], neighborhoods: ["West Village"] })).toBe(5);
+  });
+});
+
+describe("neighborhood picker helpers", () => {
+  const all = [
+    cafe({ id: "1", neighborhood: "West Village" }), cafe({ id: "2", neighborhood: "West Village" }),
+    cafe({ id: "3", neighborhood: "SoHo" }), cafe({ id: "4", neighborhood: "East Village" }),
+  ];
+
+  it("counts cafes per neighborhood, sorted by name", () => {
+    expect(neighborhoodCounts(all)).toEqual([
+      { name: "East Village", count: 1 }, { name: "SoHo", count: 1 }, { name: "West Village", count: 2 },
+    ]);
+  });
+
+  it("matches case-insensitively on a substring; blank keeps all", () => {
+    const opts = neighborhoodCounts(all);
+    expect(matchNeighborhoods(opts, "  vILL ").map((o) => o.name)).toEqual(["East Village", "West Village"]);
+    expect(matchNeighborhoods(opts, "")).toHaveLength(3);
+    expect(matchNeighborhoods(opts, "zzz")).toEqual([]);
   });
 });

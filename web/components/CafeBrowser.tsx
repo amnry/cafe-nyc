@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { sortByDistance, walkLabel } from "@/lib/distance";
 import { useFavorites } from "@/lib/favorites";
-import { applyFilters, DEFAULT_FILTERS, type Filters } from "@/lib/filters";
+import { applyFilters, DEFAULT_FILTERS, neighborhoodCounts, type Filters } from "@/lib/filters";
 import { getOpenStatus } from "@/lib/hours";
 import { pickSurprise } from "@/lib/live";
 import { nextBatch, PAGE_SIZE } from "@/lib/paging";
@@ -45,7 +45,7 @@ export function CafeBrowser({ cafes, renderedAt, mapsKey, turnstileSiteKey }: {
   const [query, setQuery] = useSearchQuery();
   const geo = useGeolocation();
 
-  const neighborhoods = useMemo(() => [...new Set(cafes.map((c) => c.neighborhood))].sort(), [cafes]);
+  const neighborhoods = useMemo(() => neighborhoodCounts(cafes), [cafes]);
   const searcher = useMemo(() => createSearcher(cafes), [cafes]);
   // Search and filters combine: a cafe must match both.
   const visible = useMemo(

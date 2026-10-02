@@ -1,6 +1,7 @@
 "use client";
 
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
+import { MarkerClusterer, type Cluster, type Renderer } from "@googlemaps/markerclusterer";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { LatLng } from "@/lib/distance";
 import type { Cafe } from "@/lib/types";
@@ -29,6 +30,21 @@ function pinElement(open: boolean, name: string): HTMLElement {
   return el;
 }
 
+/** Cluster bubble: amber fill, ink count; grows a little with the count. Clicking zooms in (library default). */
+const clusterRenderer: Renderer = {
+  render({ count, position }: Cluster) {
+    const size = count >= 100 ? 48 : count >= 25 ? 42 : 36;
+    const el = document.createElement("div");
+    el.setAttribute("aria-label", `${count} cafes, zoom in`);
+    el.style.width = el.style.height = `${size}px`;
+    el.className =
+      "grid place-items-center rounded-full border-2 border-foreground bg-accent font-mono text-[12px] font-bold " +
+      "text-accent-ink shadow-[0_1px_2px_rgba(26,18,3,.4)]";
+    el.textContent = String(count);
+    return new google.maps.marker.AdvancedMarkerElement({ position, content: el, zIndex: 500 + count });
+  },
+};
+
 function youElement(): HTMLElement {
   const el = document.createElement("div");
   el.className = "size-3.5 rounded-full border-2 border-white bg-sky-400 shadow-[0_0_0_6px_rgba(56,189,248,.25)]";
@@ -53,6 +69,7 @@ export default function CafeMap({ apiKey, cafes, openIds, origin, onSelect, rend
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const markers = useRef(new Map<string, google.maps.marker.AdvancedMarkerElement>());
+  const clusterer = useRef<MarkerClusterer | null>(null);
   const you = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   const selectRef = useRef(onSelect);
   const fittedKey = useRef<string>("");
@@ -100,6 +117,7 @@ export default function CafeMap({ apiKey, cafes, openIds, origin, onSelect, rend
         // The card is placed in pixels, so it would drift once the map moves.
         map.current.addListener("dragstart", () => setHover(null));
         map.current.addListener("zoom_changed", () => setHover(null));
+        clusterer.current = new MarkerClusterer({ map: map.current, renderer: clusterRenderer });
         setReady(true);
       })
       .catch(() => {
@@ -107,23 +125,27 @@ export default function CafeMap({ apiKey, cafes, openIds, origin, onSelect, rend
       });
     return () => {
       cancelled = true;
+      clusterer.current?.clearMarkers();
+      clusterer.current = null;
     };
   }, [apiKey]);
 
   // Sync pins with the filtered list; refit only when the set of cafes changes.
   useEffect(() => {
     const m = map.current;
-    if (!ready || !m) return;
+    const group = clusterer.current;
+    if (!ready || !m || !group) return;
     const { AdvancedMarkerElement } = google.maps.marker;
     const placed = cafes.filter((c) => c.lat !== null && c.lng !== null);
     const keep = new Set(placed.map((c) => c.id));
 
     for (const [id, marker] of markers.current) {
       if (!keep.has(id)) {
-        marker.map = null;
+        group.removeMarker(marker, true);
         markers.current.delete(id);
       }
     }
+    const added: google.maps.marker.AdvancedMarkerElement[] = [];
     const pin = (cafe: Cafe) => {
       const el = pinElement(openIds.has(cafe.id), cafe.name);
       el.addEventListener("pointerenter", (e) => e.pointerType === "mouse" && showCard(cafe, el));
@@ -136,15 +158,18 @@ export default function CafeMap({ apiKey, cafes, openIds, origin, onSelect, rend
         existing.content = pin(cafe);
         continue;
       }
+      // No map here: the clusterer decides whether this pin or a cluster bubble is on the map.
       const marker = new AdvancedMarkerElement({
-        map: m,
         position: { lat: cafe.lat!, lng: cafe.lng! },
         content: pin(cafe),
         gmpClickable: true,
       });
       marker.addListener("gmp-click", () => selectRef.current(cafe));
       markers.current.set(cafe.id, marker);
+      added.push(marker);
     }
+    group.addMarkers(added, true);
+    group.render();
 
     const key = placed.map((c) => c.id).sort().join(",") + (origin ? "|you" : "");
     if (key !== fittedKey.current) {

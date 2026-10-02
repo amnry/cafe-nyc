@@ -38,3 +38,16 @@ export function applyFilters(cafes: Cafe[], f: Filters, now: Date | null): Cafe[
     return true;
   });
 }
+
+/** Cafe count per neighborhood, sorted by name. Counts the full list, so they stay stable while filtering. */
+export function neighborhoodCounts(cafes: Cafe[]): { name: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const c of cafes) counts.set(c.neighborhood, (counts.get(c.neighborhood) ?? 0) + 1);
+  return [...counts].map(([name, count]) => ({ name, count })).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** Case-insensitive substring match on the neighborhood name; blank query keeps everything. */
+export function matchNeighborhoods<T extends { name: string }>(options: T[], query: string): T[] {
+  const q = query.trim().toLowerCase();
+  return q ? options.filter((o) => o.name.toLowerCase().includes(q)) : options;
+}
