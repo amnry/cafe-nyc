@@ -210,21 +210,42 @@ def discovery_targets(places: Places, existing: dict, errors: list[str]) -> tupl
     return targets, d.places
 
 
-def last_success(runs: list[dict]) -> datetime | None:
+SCOPE_PREFIX = "scope: "
+
+
+def scope_marker(codes) -> str:
+    """Stored in etl_runs.errors by a full discovery run: the NTA codes it covered. Not a failure."""
+    return SCOPE_PREFIX + ",".join(sorted(codes))
+
+
+def run_scope(run: dict) -> frozenset[str]:
+    """NTA codes a stored run covered; empty when it recorded none (older runs, partial runs)."""
+    for e in run.get("errors") or []:
+        if str(e).startswith(SCOPE_PREFIX):
+            return frozenset(x for x in str(e)[len(SCOPE_PREFIX):].split(",") if x)
+    return frozenset()
+
+
+def last_success(runs: list[dict], required=None) -> datetime | None:
     """finished_at of the newest successful run. Successful = finished, processed at least one cafe,
-    and no "aborted:" error. Per-cafe "skipped:" / "warning:" / ERROR entries are normal and do not count."""
+    no "aborted:" error, and covered every NTA in `required` (default config.ACTIVE_NTAS). Scoped,
+    --limit and name/place-id runs record no full scope, so they never reset the refresh clock.
+    Per-cafe "skipped:" / "warning:" / ERROR entries are normal and do not count as failure."""
+    required = frozenset(config.ACTIVE_NTAS if required is None else required)
     for r in sorted(runs, key=lambda r: r["finished_at"], reverse=True):
         if not r.get("finished_at") or not r.get("cafes_processed"):
             continue
         if any(str(e).startswith("aborted:") for e in (r.get("errors") or [])):
             continue
+        if not required <= run_scope(r):
+            continue
         return datetime.fromisoformat(r["finished_at"].replace("Z", "+00:00"))
     return None
 
 
-def is_due(runs: list[dict], stale_days: int, now: datetime) -> bool:
-    """True when there is no successful run, or the last one finished stale_days or more ago."""
-    last = last_success(runs)
+def is_due(runs: list[dict], stale_days: int, now: datetime, required=None) -> bool:
+    """True when there is no qualifying run, or the last one finished stale_days or more ago."""
+    last = last_success(runs, required)
     return last is None or (now - last).total_seconds() >= stale_days * 86400
 
 
@@ -342,7 +363,10 @@ def _run(args, env, stats, places, client, store, existing, taken, errors, run_i
             errors.append(msg)
             print(f"\n[{i}/{len(targets)}] ERROR {msg}")
     if run_id:
-        store.finish_run(run_id, processed, errors)
+        # Only a full discovery run (no --limit/--names/--place-ids/--all-existing) records its scope, so only
+        # it can satisfy --if-stale-days. The marker goes to the stored row, not the local errors list.
+        full = not (args.all_existing or args.place_ids or args.names or args.limit is not None)
+        store.finish_run(run_id, processed, errors + ([scope_marker(geo.active_codes())] if full else []))
         refresh_site(errors)
 
     if done:

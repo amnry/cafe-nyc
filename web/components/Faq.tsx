@@ -1,10 +1,24 @@
+import type { ReactNode } from "react";
 import { MONO_LABEL } from "./bits";
 
 /**
  * Plain-language answers about the WiFi test and where the data comes from. Written for visitors,
  * not engineers: keep every claim true to docs/wifi-spec.md and CLAUDE.md if either changes.
  */
-const QUESTIONS: { q: string; a: string }[] = [
+function XLink({ handle }: { handle: string }) {
+  return (
+    <a
+      href={`https://x.com/${handle}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-foreground underline decoration-1 underline-offset-4 hover:decoration-2"
+    >
+      x.com/{handle}
+    </a>
+  );
+}
+
+const QUESTIONS: { q: string; a: ReactNode }[] = [
   {
     q: "Where do the WiFi speeds come from?",
     a: "From people working at these cafes. Anyone at a cafe can tap Test, and we show the typical speed from the last 90 days, so one slow afternoon doesn't define a cafe.",
@@ -27,11 +41,31 @@ const QUESTIONS: { q: string; a: string }[] = [
   },
   {
     q: "Where does the cafe information come from?",
-    a: "Names, addresses, ratings, hours, and details like restrooms, dogs, and outdoor seating come from Google Maps. Descriptions are Google's own. We refresh everything every two weeks and mark anything older as possibly outdated.",
+    a: "Names, addresses, ratings, hours, and details like restrooms, dogs, and outdoor seating come from Google Maps. Descriptions are Google's own. We refresh everything about every three to four weeks and mark anything older as possibly outdated.",
   },
   {
     q: "How do you choose which cafes to list?",
     a: "We start with every place Google Maps lists as a cafe or coffee shop in the neighborhoods we cover, then leave out members-only spaces, takeout-only counters, and places with too few reviews or no posted hours.",
+  },
+  {
+    q: "Why isn't a cafe listed?",
+    a: (
+      <>
+        To keep the list useful, I&apos;ve hidden places with no opening hours, fewer than 5 Google reviews, and
+        spots inside buildings that need special access. If I&apos;ve missed somewhere great, correct me on{" "}
+        <XLink handle="amnry" />.
+      </>
+    ),
+  },
+  {
+    q: "I own a cafe and something's wrong. How do I fix it?",
+    a: (
+      <>
+        The data comes from Google Maps and refreshes about every three to four weeks. Update your Google Business
+        Profile (hours, details, photos) and the change appears here at the next refresh. For anything else, DM me on{" "}
+        <XLink handle="amnry" />.
+      </>
+    ),
   },
 ];
 

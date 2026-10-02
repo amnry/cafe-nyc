@@ -90,14 +90,16 @@ def test_touches_scope():
 # --- --if-stale-days (schedule B) ---
 from datetime import datetime, timedelta, timezone  # noqa: E402
 
+import config  # noqa: E402
 import run as run_mod  # noqa: E402
 
 _NOW = datetime(2026, 11, 2, 9, 0, tzinfo=timezone.utc)
+_FULL = run_mod.scope_marker(config.ACTIVE_NTAS)
 
 
-def _run_row(days_ago, processed=100, errors=()):
+def _run_row(days_ago, processed=100, errors=(), scope=_FULL):
     return {"finished_at": (_NOW - timedelta(days=days_ago)).isoformat(), "cafes_processed": processed,
-            "errors": list(errors)}
+            "errors": list(errors) + ([scope] if scope else [])}
 
 
 def test_due_when_no_runs():
@@ -114,3 +116,27 @@ def test_aborted_and_empty_runs_do_not_count_but_skipped_does():
     assert run_mod.last_success(runs) == _NOW - timedelta(days=3)
     assert not run_mod.is_due(runs, 23, _NOW)
     assert run_mod.is_due(runs[:2], 23, _NOW)  # only failed runs: due
+
+
+def test_scoped_run_does_not_reset_the_clock():
+    """A --neighborhoods run covering part of ACTIVE_NTAS, however recent, is ignored."""
+    partial = _run_row(1, scope=run_mod.scope_marker(sorted(config.ACTIVE_NTAS)[:3]))
+    old_full = _run_row(30)
+    assert run_mod.last_success([partial, old_full]) == _NOW - timedelta(days=30)
+    assert run_mod.is_due([partial, old_full], 23, _NOW)
+    assert run_mod.is_due([partial], 23, _NOW)  # nothing qualifying at all
+
+
+def test_runs_without_a_scope_marker_do_not_count():
+    """Older rows, --limit, --names and --place-ids runs record no scope."""
+    assert run_mod.is_due([_run_row(1, scope=None)], 23, _NOW)
+
+
+def test_superset_scope_counts_and_expanding_active_ntas_invalidates_old_runs():
+    everything = _run_row(2, scope=run_mod.scope_marker(config.TARGET_NTAS))
+    assert not run_mod.is_due([everything], 23, _NOW)  # covers ACTIVE_NTAS and more
+    manhattan_only = _run_row(2)
+    assert not run_mod.is_due([manhattan_only], 23, _NOW)
+    stage2 = set(config.ACTIVE_NTAS) | {"BK0101", "BK0102", "BK0201", "BK0202", "QN0201"}
+    assert run_mod.is_due([manhattan_only], 23, _NOW, required=stage2)  # Stage 2 forces a refresh
+    assert not run_mod.is_due([everything], 23, _NOW, required=stage2)

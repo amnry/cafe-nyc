@@ -22,6 +22,11 @@ def set_scope(codes) -> None:
     _ring_boxes.cache_clear()
 
 
+def active_codes() -> frozenset[str]:
+    """NTA codes currently in scope."""
+    return frozenset(TARGET_NTAS) if _scope is None else _scope
+
+
 @lru_cache(maxsize=1)
 def neighborhoods() -> tuple[tuple[str, tuple], ...]:
     """(label, polygons) of the in-scope NTAs from the official NYC Open Data 2020 boundaries.
